@@ -8,7 +8,7 @@ from torchvision import datasets
 class DummyDataset(torch.utils.data.Dataset):
     def __init__(self, digit, c):
         # self.t = torch.ones(2, 224).to(device)
-        self.t = torch.ones(3, 28, 28) * digit
+        self.t = torch.ones(2, 128) * digit
         self.c = c
 
     def __getitem__(self, index):

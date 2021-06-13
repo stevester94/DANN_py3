@@ -7,15 +7,17 @@ class CNNModel(nn.Module):
     def __init__(self):
         super(CNNModel, self).__init__()
         self.feature = nn.Sequential()
-        self.feature.add_module('f_conv1', nn.Conv2d(3, 64, kernel_size=5))
-        self.feature.add_module('f_bn1', nn.BatchNorm2d(64))
-        self.feature.add_module('f_pool1', nn.MaxPool2d(2))
-        self.feature.add_module('f_relu1', nn.ReLU(True))
-        self.feature.add_module('f_conv2', nn.Conv2d(64, 50, kernel_size=5))
-        self.feature.add_module('f_bn2', nn.BatchNorm2d(50))
-        self.feature.add_module('f_drop1', nn.Dropout2d())
-        self.feature.add_module('f_pool2', nn.MaxPool2d(2))
-        self.feature.add_module('f_relu2', nn.ReLU(True))
+        self.feature.add_module("f_flatten", nn.Flatten())
+        self.feature.add_module('c_fc1', nn.Linear(2*128, 800))
+        # self.feature.add_module('f_conv1', nn.Conv2d(3, 64, kernel_size=5))
+        # self.feature.add_module('f_bn1', nn.BatchNorm2d(64))
+        # self.feature.add_module('f_pool1', nn.MaxPool2d(2))
+        # self.feature.add_module('f_relu1', nn.ReLU(True))
+        # self.feature.add_module('f_conv2', nn.Conv2d(64, 50, kernel_size=5))
+        # self.feature.add_module('f_bn2', nn.BatchNorm2d(50))
+        # self.feature.add_module('f_drop1', nn.Dropout2d())
+        # self.feature.add_module('f_pool2', nn.MaxPool2d(2))
+        # self.feature.add_module('f_relu2', nn.ReLU(True))
 
         self.class_classifier = nn.Sequential()
         self.class_classifier.add_module('c_fc1', nn.Linear(50 * 4 * 4, 100))
@@ -36,11 +38,22 @@ class CNNModel(nn.Module):
         self.domain_classifier.add_module('d_softmax', nn.LogSoftmax(dim=1))
 
     def forward(self, input_data, alpha):
-        input_data = input_data.expand(input_data.data.shape[0], 3, 28, 28)
+        # print("Feature:", input_data.shape)
+        # Doesn't change anything
+        # input_data = input_data.expand(input_data.data.shape[0], 3, 28, 28)
         feature = self.feature(input_data)
+        # print("Feature:", feature.shape)
+
         feature = feature.view(-1, 50 * 4 * 4)
+        # print("Feature View:", feature.shape)
+
         reverse_feature = ReverseLayerF.apply(feature, alpha)
+        # print("Reverse Feature:", feature.shape)
+        
         class_output = self.class_classifier(feature)
         domain_output = self.domain_classifier(reverse_feature)
+
+        # import sys
+        # sys.exit(0)
 
         return class_output, domain_output

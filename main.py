@@ -28,7 +28,8 @@ n_epoch = 100
 class DummyDataset(torch.utils.data.Dataset):
     def __init__(self, digit, c):
         # self.t = torch.ones(2, 224).to(device)
-        self.t = torch.ones(3, 28, 28)
+        # self.t = torch.ones(3, 28, 28)
+        self.t = torch.ones(2, 128)
         self.t = self.t * digit
         self.c = c
 
@@ -52,17 +53,17 @@ torch.manual_seed(manual_seed)
 
 # load data
 
-img_transform_source = transforms.Compose([
-    transforms.Resize(image_size),
-    transforms.ToTensor(),
-    transforms.Normalize(mean=(0.1307,), std=(0.3081,))
-])
+# img_transform_source = transforms.Compose([
+#     transforms.Resize(image_size),
+#     transforms.ToTensor(),
+#     transforms.Normalize(mean=(0.1307,), std=(0.3081,))
+# ])
 
-img_transform_target = transforms.Compose([
-    transforms.Resize(image_size),
-    transforms.ToTensor(),
-    transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
-])
+# img_transform_target = transforms.Compose([
+#     transforms.Resize(image_size),
+#     transforms.ToTensor(),
+#     transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
+# ])
 
 dataset_source = DummyDataset(1,5)
 # dataset_source = datasets.MNIST(
