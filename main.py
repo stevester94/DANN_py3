@@ -1,3 +1,5 @@
+#! /usr/bin/env python3
+
 import random
 import os
 import sys
@@ -23,6 +25,27 @@ batch_size = 128
 image_size = 28
 n_epoch = 100
 
+class DummyDataset(torch.utils.data.Dataset):
+    def __init__(self, digit, c):
+        # self.t = torch.ones(2, 224).to(device)
+        self.t = torch.ones(3, 28, 28)
+        self.t = self.t * digit
+        self.c = c
+
+    def __getitem__(self, index):
+        return (
+            self.t,
+            self.c
+        )
+
+    def __len__(self):
+        return 100000
+
+    @property
+    def num_classes(self):
+        # raise Exception("Really?")
+        return 20
+
 manual_seed = random.randint(1, 10000)
 random.seed(manual_seed)
 torch.manual_seed(manual_seed)
@@ -41,12 +64,13 @@ img_transform_target = transforms.Compose([
     transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
 ])
 
-dataset_source = datasets.MNIST(
-    root='dataset',
-    train=True,
-    transform=img_transform_source,
-    download=True
-)
+dataset_source = DummyDataset(1,5)
+# dataset_source = datasets.MNIST(
+#     root='dataset',
+#     train=True,
+#     transform=img_transform_source,
+#     download=True
+# )
 
 dataloader_source = torch.utils.data.DataLoader(
     dataset=dataset_source,
@@ -56,11 +80,12 @@ dataloader_source = torch.utils.data.DataLoader(
 
 train_list = os.path.join(target_image_root, 'mnist_m_train_labels.txt')
 
-dataset_target = GetLoader(
-    data_root=os.path.join(target_image_root, 'mnist_m_train'),
-    data_list=train_list,
-    transform=img_transform_target
-)
+dataset_target = DummyDataset(2, 5)
+# dataset_target = GetLoader(
+#     data_root=os.path.join(target_image_root, 'mnist_m_train'),
+#     data_list=train_list,
+#     transform=img_transform_target
+# )
 
 dataloader_target = torch.utils.data.DataLoader(
     dataset=dataset_target,
@@ -68,6 +93,9 @@ dataloader_target = torch.utils.data.DataLoader(
     shuffle=True,
     num_workers=8)
 
+# for i in dataloader_source:
+#     print(i[1:])
+# sys.exit(1)
 # load model
 
 my_net = CNNModel()

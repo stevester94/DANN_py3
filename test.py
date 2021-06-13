@@ -5,6 +5,20 @@ from torchvision import transforms
 from data_loader import GetLoader
 from torchvision import datasets
 
+class DummyDataset(torch.utils.data.Dataset):
+    def __init__(self, digit, c):
+        # self.t = torch.ones(2, 224).to(device)
+        self.t = torch.ones(3, 28, 28) * digit
+        self.c = c
+
+    def __getitem__(self, index):
+        return (
+            self.t,
+            self.c
+        )
+
+    def __len__(self):
+        return 100000
 
 def test(dataset_name):
     assert dataset_name in ['MNIST', 'mnist_m']
@@ -40,12 +54,20 @@ def test(dataset_name):
             data_list=test_list,
             transform=img_transform_target
         )
+
+        # SM: Faking out the mnist dataset, should get great accuracy
+        dataset = DummyDataset(1,5)
     else:
         dataset = datasets.MNIST(
             root='dataset',
             train=False,
             transform=img_transform_source,
         )
+
+        # SM: Faking out the mnist dataset, should get horrible accuracy
+        dataset = DummyDataset(1,7)
+
+
 
     dataloader = torch.utils.data.DataLoader(
         dataset=dataset,
