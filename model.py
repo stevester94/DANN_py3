@@ -7,8 +7,13 @@ class CNNModel(nn.Module):
     def __init__(self):
         super(CNNModel, self).__init__()
         self.feature = nn.Sequential()
-        self.feature.add_module("f_flatten", nn.Flatten())
-        self.feature.add_module('c_fc1', nn.Linear(2*128, 800))
+        import torch
+
+        # My shit
+        # self.feature.add_module("f_flatten", nn.Flatten())
+        # self.feature.add_module('c_fc1', nn.Linear(2*128, 800))
+
+        
         # self.feature.add_module('f_conv1', nn.Conv2d(3, 64, kernel_size=5))
         # self.feature.add_module('f_bn1', nn.BatchNorm2d(64))
         # self.feature.add_module('f_pool1', nn.MaxPool2d(2))
@@ -18,6 +23,33 @@ class CNNModel(nn.Module):
         # self.feature.add_module('f_drop1', nn.Dropout2d())
         # self.feature.add_module('f_pool2', nn.MaxPool2d(2))
         # self.feature.add_module('f_relu2', nn.ReLU(True))
+        # The final shape of the feature extractor is None,50,4,4. The subsequent components just flatten this though
+
+        # x = torch.ones(10, 3, 28,28)
+        # print(self.feature(x).shape)
+
+        # First conv layer
+        # I assume out channels is number of filters
+        self.feature.add_module('f_conv1', nn.Conv1d(in_channels=2, out_channels=50, kernel_size=7, stride=1))
+        self.feature.add_module('f_bn1', nn.BatchNorm1d(50))
+        self.feature.add_module('f_pool1', nn.MaxPool1d(2))
+        self.feature.add_module('f_relu1', nn.ReLU(True))
+
+        # Second conv layer
+        self.feature.add_module('f_conv2', nn.Conv1d(in_channels=50, out_channels=50, kernel_size=29, stride=1))
+        self.feature.add_module('f_bn2', nn.BatchNorm1d(50))
+        self.feature.add_module('f_drop1', nn.Dropout())
+        self.feature.add_module('f_pool2', nn.MaxPool1d(2))
+        self.feature.add_module('f_relu2', nn.ReLU(True))
+
+
+        # x = torch.ones(10, 2, 128)
+        # print(self.feature(x).shape)
+
+
+        # print(dir(self.feature.shape))
+        # import sys
+        # sys.exit(1)
 
         self.class_classifier = nn.Sequential()
         self.class_classifier.add_module('c_fc1', nn.Linear(50 * 4 * 4, 100))
