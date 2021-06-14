@@ -20,60 +20,19 @@ class DummyDataset(torch.utils.data.Dataset):
     def __len__(self):
         return 100000
 
-def test(dataset_name):
-    assert dataset_name in ['MNIST', 'mnist_m']
-
+def test(dataset):
     model_root = 'models'
-    image_root = os.path.join('dataset', dataset_name)
 
     cuda = True
     cudnn.benchmark = True
     batch_size = 128
-    image_size = 28
     alpha = 0
-
-    """load data"""
-
-    img_transform_source = transforms.Compose([
-        transforms.Resize(image_size),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=(0.1307,), std=(0.3081,))
-    ])
-
-    img_transform_target = transforms.Compose([
-        transforms.Resize(image_size),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
-    ])
-
-    if dataset_name == 'mnist_m':
-        test_list = os.path.join(image_root, 'mnist_m_test_labels.txt')
-
-        dataset = GetLoader(
-            data_root=os.path.join(image_root, 'mnist_m_test'),
-            data_list=test_list,
-            transform=img_transform_target
-        )
-
-        # SM: Faking out the mnist dataset, should get great accuracy
-        dataset = DummyDataset(1,5)
-    else:
-        dataset = datasets.MNIST(
-            root='dataset',
-            train=False,
-            transform=img_transform_source,
-        )
-
-        # SM: Faking out the mnist dataset, should get horrible accuracy
-        dataset = DummyDataset(1,7)
-
-
 
     dataloader = torch.utils.data.DataLoader(
         dataset=dataset,
         batch_size=batch_size,
-        shuffle=False,
-        num_workers=8
+        # shuffle=False,
+        # num_workers=8
     )
 
     """ test """

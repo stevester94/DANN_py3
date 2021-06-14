@@ -13,91 +13,75 @@ from torchvision import transforms
 from model import CNNModel
 from test import test
 
-source_dataset_name = 'MNIST'
-target_dataset_name = 'mnist_m'
-source_image_root = os.path.join('dataset', source_dataset_name)
-target_image_root = os.path.join('dataset', target_dataset_name)
-model_root = 'models'
 cuda = True
 cudnn.benchmark = True
-lr = 1e-3
+lr = 1e-4
 batch_size = 128
-image_size = 28
 n_epoch = 100
-
-class DummyDataset(torch.utils.data.Dataset):
-    def __init__(self, digit, c):
-        # self.t = torch.ones(2, 224).to(device)
-        # self.t = torch.ones(3, 28, 28)
-        self.t = torch.ones(2, 128)
-        self.t = self.t * digit
-        self.c = c
-
-    def __getitem__(self, index):
-        return (
-            self.t,
-            self.c
-        )
-
-    def __len__(self):
-        return 100000
-
-    @property
-    def num_classes(self):
-        # raise Exception("Really?")
-        return 20
+model_root = "./model"
 
 manual_seed = random.randint(1, 10000)
 random.seed(manual_seed)
 torch.manual_seed(manual_seed)
 
-# load data
+from steves_utils import utils
+from torch_dataset_accessor.torch_windowed_shuffled_dataset_accessor import get_torch_windowed_shuffled_datasets
 
-# img_transform_source = transforms.Compose([
-#     transforms.Resize(image_size),
-#     transforms.ToTensor(),
-#     transforms.Normalize(mean=(0.1307,), std=(0.3081,))
-# ])
+# class DummyDataset(torch.utils.data.Dataset):
+#     def __init__(self, digit, c):
+#         # self.t = torch.ones(2, 224).to(device)
+#         # self.t = torch.ones(3, 28, 28)
+#         self.t = torch.ones(2, 128)
+#         self.t = self.t * digit
+#         self.c = c
 
-# img_transform_target = transforms.Compose([
-#     transforms.Resize(image_size),
-#     transforms.ToTensor(),
-#     transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
-# ])
+#     def __getitem__(self, index):
+#         return (
+#             self.t,
+#             self.c
+#         )
 
-dataset_source = DummyDataset(1,5)
-# dataset_source = datasets.MNIST(
-#     root='dataset',
-#     train=True,
-#     transform=img_transform_source,
-#     download=True
-# )
+#     def __len__(self):
+#         return 100000
+
+#     @property
+#     def num_classes(self):
+#         # raise Exception("Really?")
+#         return 20
+
+source_distance = 50
+target_distance = 14
+
+source_ds_path = "{datasets_base_path}/automated_windower/windowed_EachDevice-200k_batch-100_stride-20_distances-{distance}".format(
+    datasets_base_path=utils.get_datasets_base_path(), distance=source_distance
+)
+
+target_ds_path = "{datasets_base_path}/automated_windower/windowed_EachDevice-200k_batch-100_stride-20_distances-{distance}".format(
+    datasets_base_path=utils.get_datasets_base_path(), distance=target_distance
+)
+
+datasets_source = get_torch_windowed_shuffled_datasets(source_ds_path)
+datasets_target = get_torch_windowed_shuffled_datasets(target_ds_path)
+
+train_ds_source = datasets_source["train_ds"]
+train_ds_target = datasets_target["train_ds"]
+
+test_ds_source = datasets_source["test_ds"]
+test_ds_target = datasets_target["test_ds"]
 
 dataloader_source = torch.utils.data.DataLoader(
-    dataset=dataset_source,
+    dataset=train_ds_source,
     batch_size=batch_size,
-    shuffle=True,
-    num_workers=8)
-
-train_list = os.path.join(target_image_root, 'mnist_m_train_labels.txt')
-
-dataset_target = DummyDataset(2, 5)
-# dataset_target = GetLoader(
-#     data_root=os.path.join(target_image_root, 'mnist_m_train'),
-#     data_list=train_list,
-#     transform=img_transform_target
-# )
+    # shuffle=True,
+    # num_workers=8
+)
 
 dataloader_target = torch.utils.data.DataLoader(
-    dataset=dataset_target,
+    dataset=train_ds_target,
     batch_size=batch_size,
-    shuffle=True,
-    num_workers=8)
-
-# for i in dataloader_source:
-#     print(i[1:])
-# sys.exit(1)
-# load model
+    # shuffle=True,
+    # num_workers=8
+)
 
 my_net = CNNModel()
 
@@ -145,6 +129,8 @@ for epoch in range(n_epoch):
 
 
         class_output, domain_output = my_net(input_data=s_img, alpha=alpha)
+
+
         err_s_label = loss_class(class_output, s_label)
         err_s_domain = loss_domain(domain_output, domain_label)
 
@@ -173,9 +159,9 @@ for epoch in range(n_epoch):
         torch.save(my_net, '{0}/mnist_mnistm_model_epoch_current.pth'.format(model_root))
 
     print('\n')
-    accu_s = test(source_dataset_name)
+    accu_s = test(test_ds_source)
     print('Accuracy of the %s dataset: %f' % ('mnist', accu_s))
-    accu_t = test(target_dataset_name)
+    accu_t = test(test_ds_target)
     print('Accuracy of the %s dataset: %f\n' % ('mnist_m', accu_t))
     if accu_t > best_accu_t:
         best_accu_s = accu_s
