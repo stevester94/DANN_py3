@@ -16,7 +16,7 @@ from test import test
 cuda = True
 cudnn.benchmark = True
 lr = 1e-4
-batch_size = 128
+batch_size = 1024
 n_epoch = 100
 model_root = "./model"
 
@@ -113,6 +113,8 @@ for epoch in range(n_epoch):
         p = float(i + epoch * len_dataloader) / n_epoch / len_dataloader
         alpha = 2. / (1. + np.exp(-10 * p)) - 1
 
+        print("Alpha", alpha)
+
         # training model using source data
         data_source = data_source_iter.next()
         s_img, s_label = data_source
@@ -160,9 +162,9 @@ for epoch in range(n_epoch):
 
     print('\n')
     accu_s = test(test_ds_source)
-    print('Accuracy of the %s dataset: %f' % ('mnist', accu_s))
+    print('Accuracy of the %s dataset: %f' % ('Source', accu_s))
     accu_t = test(test_ds_target)
-    print('Accuracy of the %s dataset: %f\n' % ('mnist_m', accu_t))
+    print('Accuracy of the %s dataset: %f\n' % ('Target', accu_t))
     if accu_t > best_accu_t:
         best_accu_s = accu_s
         best_accu_t = accu_t
