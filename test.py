@@ -21,11 +21,11 @@ class DummyDataset(torch.utils.data.Dataset):
         return 100000
 
 def test(dataset):
-    model_root = 'models'
+    model_root = 'model'
 
     cuda = True
     cudnn.benchmark = True
-    batch_size = 128
+    batch_size = 1024
     alpha = 0
 
     dataloader = torch.utils.data.DataLoader(

@@ -60,8 +60,8 @@ target_ds_path = "{datasets_base_path}/automated_windower/windowed_EachDevice-20
     datasets_base_path=utils.get_datasets_base_path(), distance=target_distance
 )
 
-datasets_source = get_torch_windowed_shuffled_datasets(source_ds_path)
-datasets_target = get_torch_windowed_shuffled_datasets(target_ds_path)
+datasets_source = get_torch_windowed_shuffled_datasets(source_ds_path, take=102400)
+datasets_target = get_torch_windowed_shuffled_datasets(target_ds_path, take=102400)
 
 train_ds_source = datasets_source["train_ds"]
 train_ds_target = datasets_target["train_ds"]
@@ -113,7 +113,7 @@ for epoch in range(n_epoch):
         p = float(i + epoch * len_dataloader) / n_epoch / len_dataloader
         alpha = 2. / (1. + np.exp(-10 * p)) - 1
 
-        print("Alpha", alpha)
+        # print("Alpha", alpha)
 
         # training model using source data
         data_source = data_source_iter.next()
