@@ -18,8 +18,8 @@ torch.set_default_dtype(torch.float64)
 
 cuda = True
 cudnn.benchmark = True
-lr = 1e-4
-n_epoch = 5
+lr = 0.0001
+n_epoch = 100
 model_root = "./model"
 
 manual_seed = 1337
@@ -142,7 +142,7 @@ my_net = CNNModel()
 optimizer = optim.Adam(my_net.parameters(), lr=lr)
 
 loss_class = torch.nn.CrossEntropyLoss()
-loss_domain = torch.nn.NLLLoss()
+loss_domain = torch.nn.CrossEntropyLoss()
 
 if cuda:
     my_net = my_net.cuda()
@@ -210,7 +210,7 @@ for epoch in range(n_epoch):
         err.backward()
         optimizer.step()
 
-        sys.stdout.write('\r epoch: %d, [iter: %d / all %d], err_s_label: %f, err_s_domain: %f, err_t_domain: %f' \
+        sys.stdout.write('epoch: %d, [iter: %d / all %d], err_s_label: %f, err_s_domain: %f, err_t_domain: %f\n' \
               % (epoch, i + 1, len_dataloader, err_s_label.data.cpu().numpy(),
                  err_s_domain.data.cpu().numpy(), err_t_domain.data.cpu().item()))
         sys.stdout.flush()

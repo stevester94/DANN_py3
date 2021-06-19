@@ -46,9 +46,9 @@ class CNNModel(nn.Module):
 
 
         self.feature.add_module('f_conv1', nn.Conv1d(in_channels=2, out_channels=50, kernel_size=7, stride=1))
-        self.feature.add_module('f_relu2', nn.ReLU(True))
+        self.feature.add_module('f_relu2', nn.ReLU(False))
         self.feature.add_module('f_conv2', nn.Conv1d(in_channels=50, out_channels=50, kernel_size=7, stride=2))
-        self.feature.add_module('f_relu2', nn.ReLU(True))
+        self.feature.add_module('f_relu2', nn.ReLU(False))
         self.feature.add_module('f_drop1', nn.Dropout())
 
         # x = torch.ones(10, 2, 128)
@@ -81,20 +81,19 @@ class CNNModel(nn.Module):
         self.class_classifier = nn.Sequential()
         self.class_classifier.add_module('c_fc1', nn.Linear(50 * 58, 256))
         # self.class_classifier.add_module('c_bn1', nn.BatchNorm1d(100))
-        self.class_classifier.add_module('c_relu1', nn.ReLU(True))
+        self.class_classifier.add_module('c_relu1', nn.ReLU(False))
         self.class_classifier.add_module('c_drop1', nn.Dropout())
         self.class_classifier.add_module('c_fc2', nn.Linear(256, 80))
         # self.class_classifier.add_module('c_bn2', nn.BatchNorm1d(100))
-        self.class_classifier.add_module('c_relu2', nn.ReLU(True))
+        self.class_classifier.add_module('c_relu2', nn.ReLU(False))
         self.class_classifier.add_module('c_fc3', nn.Linear(80, 16))
         # self.class_classifier.add_module('c_softmax', nn.LogSoftmax(dim=1))
 
-        # self.domain_classifier = nn.Sequential()
-
-        # self.domain_classifier.add_module('d_fc1', nn.Linear(50 * 58, 100))
+        self.domain_classifier = nn.Sequential()
+        self.domain_classifier.add_module('d_fc1', nn.Linear(50 * 58, 100))
         # self.domain_classifier.add_module('d_bn1', nn.BatchNorm1d(100))
-        # self.domain_classifier.add_module('d_relu1', nn.ReLU(True))
-        # self.domain_classifier.add_module('d_fc2', nn.Linear(100, 2))
+        self.domain_classifier.add_module('d_relu1', nn.ReLU(False))
+        self.domain_classifier.add_module('d_fc2', nn.Linear(100, 2))
         # self.domain_classifier.add_module('d_softmax', nn.LogSoftmax(dim=1))
 
     def forward(self, input_data, alpha):
@@ -108,20 +107,20 @@ class CNNModel(nn.Module):
         feature = feature.view(-1, 50 * 58)
         # print("Feature View:", feature.shape)
 
-        # reverse_feature = ReverseLayerF.apply(feature, alpha)
+        reverse_feature = ReverseLayerF.apply(feature, alpha)
         # print("Reverse Feature:", feature.shape)
         
         class_output = self.class_classifier(feature)
-        # domain_output = self.domain_classifier(reverse_feature)
+        domain_output = self.domain_classifier(reverse_feature)
 
         # print(domain_output)
 
 
         # Fake out the domain_output
         # l = [[1.0,0.0]] * 1024
-        l = [[-10.0,-10.0]] * 512
-        domain_output =  numpy.asarray(l)
-        domain_output =  torch.as_tensor(domain_output).cuda()
+        # l = [[-10.0,-10.0]] * 512
+        # domain_output =  numpy.asarray(l)
+        # domain_output =  torch.as_tensor(domain_output).cuda()
 
 
 
