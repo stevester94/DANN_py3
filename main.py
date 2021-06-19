@@ -13,44 +13,96 @@ from torchvision import transforms
 from model import CNNModel
 from test import test
 
+torch.set_default_dtype(torch.float64)
+
+
 cuda = True
 cudnn.benchmark = True
 lr = 1e-4
-batch_size = 1024
-n_epoch = 100
+n_epoch = 5
 model_root = "./model"
 
-manual_seed = random.randint(1, 10000)
+manual_seed = 1337
 random.seed(manual_seed)
 torch.manual_seed(manual_seed)
 
 from steves_utils import utils
-from torch_dataset_accessor.torch_windowed_shuffled_dataset_accessor import get_torch_windowed_shuffled_datasets
+from steves_utils.ORACLE.windowed_shuffled_dataset_accessor import Windowed_Shuffled_Dataset_Factory
+import tensorflow as tf
 
-# class DummyDataset(torch.utils.data.Dataset):
-#     def __init__(self, digit, c):
-#         # self.t = torch.ones(2, 224).to(device)
-#         # self.t = torch.ones(3, 28, 28)
-#         self.t = torch.ones(2, 128)
-#         self.t = self.t * digit
-#         self.c = c
-
-#     def __getitem__(self, index):
-#         return (
-#             self.t,
-#             self.c
-#         )
-
-#     def __len__(self):
-#         return 100000
-
-#     @property
-#     def num_classes(self):
-#         # raise Exception("Really?")
-#         return 20
+batch_size = 512
+ORIGINAL_BATCH_SIZE = 100
 
 source_distance = 50
 target_distance = 14
+
+def apply_dataset_pipeline(datasets):
+    """
+    Apply the appropriate dataset pipeline to the datasets returned from the Windowed_Shuffled_Dataset_Factory
+    """
+    train_ds = datasets["train_ds"]
+    val_ds = datasets["val_ds"]
+    test_ds = datasets["test_ds"]
+
+    # train_ds = train_ds.map(
+    #     lambda x: (x["IQ"],tf.one_hot(x["serial_number_id"], RANGE)),
+    #     num_parallel_calls=tf.data.AUTOTUNE,
+    #     deterministic=True
+    # )
+
+    # val_ds = val_ds.map(
+    #     lambda x: (x["IQ"],tf.one_hot(x["serial_number_id"], RANGE)),
+    #     num_parallel_calls=tf.data.AUTOTUNE,
+    #     deterministic=True
+    # )
+
+    # test_ds = test_ds.map(
+    #     lambda x: (x["IQ"],tf.one_hot(x["serial_number_id"], RANGE)),
+    #     num_parallel_calls=tf.data.AUTOTUNE,
+    #     deterministic=True
+    # )
+
+    train_ds = train_ds.map(
+        lambda x: (x["IQ"], x["serial_number_id"]),
+        num_parallel_calls=tf.data.AUTOTUNE,
+        deterministic=True
+    )
+
+    val_ds = val_ds.map(
+        lambda x: (x["IQ"], x["serial_number_id"]),
+        num_parallel_calls=tf.data.AUTOTUNE,
+        deterministic=True
+    )
+
+    test_ds = test_ds.map(
+        lambda x: (x["IQ"], x["serial_number_id"]),
+        num_parallel_calls=tf.data.AUTOTUNE,
+        deterministic=True
+    )
+
+    train_ds = train_ds.unbatch()
+    val_ds = val_ds.unbatch()
+    test_ds = test_ds.unbatch()
+
+    train_ds = train_ds.shuffle(100 * ORIGINAL_BATCH_SIZE, reshuffle_each_iteration=True)
+    
+    train_ds = train_ds.batch(batch_size)
+    val_ds  = val_ds.batch(batch_size)
+    test_ds = test_ds.batch(batch_size)
+
+    train_ds = train_ds.prefetch(100)
+    val_ds   = val_ds.prefetch(100)
+    test_ds  = test_ds.prefetch(100)
+
+    return train_ds, val_ds, test_ds
+
+
+def get_shuffled_and_windowed_from_pregen_ds(path):
+    datasets = Windowed_Shuffled_Dataset_Factory(path)
+
+    return apply_dataset_pipeline(datasets)
+
+
 
 source_ds_path = "{datasets_base_path}/automated_windower/windowed_EachDevice-200k_batch-100_stride-20_distances-{distance}".format(
     datasets_base_path=utils.get_datasets_base_path(), distance=source_distance
@@ -60,28 +112,28 @@ target_ds_path = "{datasets_base_path}/automated_windower/windowed_EachDevice-20
     datasets_base_path=utils.get_datasets_base_path(), distance=target_distance
 )
 
-datasets_source = get_torch_windowed_shuffled_datasets(source_ds_path, take=102400)
-datasets_target = get_torch_windowed_shuffled_datasets(target_ds_path, take=102400)
 
-train_ds_source = datasets_source["train_ds"]
-train_ds_target = datasets_target["train_ds"]
 
-test_ds_source = datasets_source["test_ds"]
-test_ds_target = datasets_target["test_ds"]
+train_ds_source, val_ds_source, test_ds_source = get_shuffled_and_windowed_from_pregen_ds(source_ds_path)
+train_ds_target, val_ds_target, test_ds_target = get_shuffled_and_windowed_from_pregen_ds(target_ds_path)
 
-dataloader_source = torch.utils.data.DataLoader(
-    dataset=train_ds_source,
-    batch_size=batch_size,
-    # shuffle=True,
-    # num_workers=8
-)
 
-dataloader_target = torch.utils.data.DataLoader(
-    dataset=train_ds_target,
-    batch_size=batch_size,
-    # shuffle=True,
-    # num_workers=8
-)
+
+# print("Unfortunately have to calculate the length of the source dataset by iterating over it. Standby...")
+# num_batches_in_train_ds_source = 0
+# for i in train_ds_source:
+#     num_batches_in_train_ds_source += 1
+# print("Done. Source Train DS Length:", num_batches_in_train_ds_source)
+
+# print("Unfortunately have to calculate the length of the source dataset by iterating over it. Standby...")
+# num_batches_in_train_ds_target = 0
+# for i in train_ds_target:
+#     num_batches_in_train_ds_target += 1
+# print("Done. Target Train DS Length:", num_batches_in_train_ds_target)
+
+print("We are hardcoding DS length!")
+num_batches_in_train_ds_source = 6250
+num_batches_in_train_ds_target = 6250
 
 my_net = CNNModel()
 
@@ -89,7 +141,7 @@ my_net = CNNModel()
 
 optimizer = optim.Adam(my_net.parameters(), lr=lr)
 
-loss_class = torch.nn.NLLLoss()
+loss_class = torch.nn.CrossEntropyLoss()
 loss_domain = torch.nn.NLLLoss()
 
 if cuda:
@@ -104,9 +156,9 @@ for p in my_net.parameters():
 best_accu_t = 0.0
 for epoch in range(n_epoch):
 
-    len_dataloader = min(len(dataloader_source), len(dataloader_target))
-    data_source_iter = iter(dataloader_source)
-    data_target_iter = iter(dataloader_target)
+    len_dataloader = min(num_batches_in_train_ds_source, num_batches_in_train_ds_target)
+    data_source_iter = train_ds_source.as_numpy_iterator()
+    data_target_iter = train_ds_target.as_numpy_iterator()
 
     for i in range(len_dataloader):
 
@@ -118,6 +170,9 @@ for epoch in range(n_epoch):
         # training model using source data
         data_source = data_source_iter.next()
         s_img, s_label = data_source
+
+        s_img = torch.from_numpy(s_img)
+        s_label = torch.from_numpy(s_label).long()
 
         my_net.zero_grad()
         batch_size = len(s_label)
@@ -139,6 +194,7 @@ for epoch in range(n_epoch):
         # training model using target data
         data_target = data_target_iter.next()
         t_img, _ = data_target
+        t_img = torch.from_numpy(t_img)
 
         batch_size = len(t_img)
 
@@ -158,17 +214,17 @@ for epoch in range(n_epoch):
               % (epoch, i + 1, len_dataloader, err_s_label.data.cpu().numpy(),
                  err_s_domain.data.cpu().numpy(), err_t_domain.data.cpu().item()))
         sys.stdout.flush()
-        torch.save(my_net, '{0}/mnist_mnistm_model_epoch_current.pth'.format(model_root))
+        # torch.save(my_net, '{0}/mnist_mnistm_model_epoch_current.pth'.format(model_root))
 
-    print('\n')
-    accu_s = test(test_ds_source)
-    print('Accuracy of the %s dataset: %f' % ('Source', accu_s))
-    accu_t = test(test_ds_target)
-    print('Accuracy of the %s dataset: %f\n' % ('Target', accu_t))
-    if accu_t > best_accu_t:
-        best_accu_s = accu_s
-        best_accu_t = accu_t
-        torch.save(my_net, '{0}/mnist_mnistm_model_epoch_best.pth'.format(model_root))
+    # print('\n')
+    # accu_s = test(test_ds_source)
+    # print('Accuracy of the %s dataset: %f' % ('Source', accu_s))
+    # accu_t = test(test_ds_target)
+    # print('Accuracy of the %s dataset: %f\n' % ('Target', accu_t))
+    # if accu_t > best_accu_t:
+    #     best_accu_s = accu_s
+    #     best_accu_t = accu_t
+    #     torch.save(my_net, '{0}/mnist_mnistm_model_epoch_best.pth'.format(model_root))
 
 print('============ Summary ============= \n')
 print('Accuracy of the %s dataset: %f' % ('mnist', best_accu_s))

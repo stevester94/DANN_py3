@@ -87,7 +87,7 @@ class CNNModel(nn.Module):
         # self.class_classifier.add_module('c_bn2', nn.BatchNorm1d(100))
         self.class_classifier.add_module('c_relu2', nn.ReLU(True))
         self.class_classifier.add_module('c_fc3', nn.Linear(80, 16))
-        self.class_classifier.add_module('c_softmax', nn.LogSoftmax(dim=1))
+        # self.class_classifier.add_module('c_softmax', nn.LogSoftmax(dim=1))
 
         # self.domain_classifier = nn.Sequential()
 
@@ -119,7 +119,7 @@ class CNNModel(nn.Module):
 
         # Fake out the domain_output
         # l = [[1.0,0.0]] * 1024
-        l = [[-10.0,-10.0]] * 1024
+        l = [[-10.0,-10.0]] * 512
         domain_output =  numpy.asarray(l)
         domain_output =  torch.as_tensor(domain_output).cuda()
 
