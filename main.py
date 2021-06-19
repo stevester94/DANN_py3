@@ -30,7 +30,7 @@ from steves_utils import utils
 from steves_utils.ORACLE.windowed_shuffled_dataset_accessor import Windowed_Shuffled_Dataset_Factory
 import tensorflow as tf
 
-batch_size = 512
+batch_size = 64
 ORIGINAL_BATCH_SIZE = 100
 
 source_distance = 50
@@ -119,21 +119,21 @@ train_ds_target, val_ds_target, test_ds_target = get_shuffled_and_windowed_from_
 
 
 
-# print("Unfortunately have to calculate the length of the source dataset by iterating over it. Standby...")
-# num_batches_in_train_ds_source = 0
-# for i in train_ds_source:
-#     num_batches_in_train_ds_source += 1
-# print("Done. Source Train DS Length:", num_batches_in_train_ds_source)
+print("Unfortunately have to calculate the length of the source dataset by iterating over it. Standby...")
+num_batches_in_train_ds_source = 0
+for i in train_ds_source:
+    num_batches_in_train_ds_source += 1
+print("Done. Source Train DS Length:", num_batches_in_train_ds_source)
 
-# print("Unfortunately have to calculate the length of the source dataset by iterating over it. Standby...")
-# num_batches_in_train_ds_target = 0
-# for i in train_ds_target:
-#     num_batches_in_train_ds_target += 1
-# print("Done. Target Train DS Length:", num_batches_in_train_ds_target)
+print("Unfortunately have to calculate the length of the source dataset by iterating over it. Standby...")
+num_batches_in_train_ds_target = 0
+for i in train_ds_target:
+    num_batches_in_train_ds_target += 1
+print("Done. Target Train DS Length:", num_batches_in_train_ds_target)
 
-print("We are hardcoding DS length!")
-num_batches_in_train_ds_source = 6250
-num_batches_in_train_ds_target = 6250
+# print("We are hardcoding DS length!")
+# num_batches_in_train_ds_source = 6250
+# num_batches_in_train_ds_target = 6250
 
 my_net = CNNModel()
 
@@ -211,8 +211,8 @@ for epoch in range(n_epoch):
         class_output, domain_output = my_net(input_data=t_img, alpha=alpha)
         err_t_label = loss_class(class_output, t_label)
         err_t_domain = loss_domain(domain_output, domain_label)
-        # err = err_t_domain + err_t_label + err_s_domain + err_s_label
-        err = err_t_label + err_s_label
+        err = err_t_domain + err_t_label + err_s_domain + err_s_label
+        # err = err_t_label + err_s_label
         err.backward()
         optimizer.step()
 
@@ -228,11 +228,8 @@ for epoch in range(n_epoch):
                     err_t_label=err_t_label.cpu().item(),
                 )
             )
-            # sys.stdout.write('epoch: %d, [iter: %d / all %d], err_s_label: %f, err_s_domain: %f, err_t_domain: %f\n' \
-            #     % (epoch, i + 1, len_dataloader, err_s_label.data.cpu().numpy(),
-            #         err_s_domain.data.cpu().numpy(), err_t_domain.data.cpu().item()))
+
             sys.stdout.flush()
-        # torch.save(my_net, '{0}/mnist_mnistm_model_epoch_current.pth'.format(model_root))
 
     # print('\n')
     # accu_s = test(test_ds_source)
