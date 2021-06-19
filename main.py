@@ -191,10 +191,13 @@ for epoch in range(n_epoch):
         err_s_label = loss_class(class_output, s_label)
         err_s_domain = loss_domain(domain_output, domain_label)
 
+        ####################################################
         # training model using target data
+        ####################################################
         data_target = data_target_iter.next()
-        t_img, _ = data_target
+        t_img, t_label = data_target
         t_img = torch.from_numpy(t_img)
+        t_label = torch.from_numpy(t_label).long()
 
         batch_size = len(t_img)
 
@@ -203,17 +206,31 @@ for epoch in range(n_epoch):
         if cuda:
             t_img = t_img.cuda()
             domain_label = domain_label.cuda()
+            t_label = t_label.cuda()
 
-        _, domain_output = my_net(input_data=t_img, alpha=alpha)
+        class_output, domain_output = my_net(input_data=t_img, alpha=alpha)
+        err_t_label = loss_class(class_output, t_label)
         err_t_domain = loss_domain(domain_output, domain_label)
-        err = err_t_domain + err_s_domain + err_s_label
+        err = err_t_domain + err_t_label + err_s_domain + err_s_label
         err.backward()
         optimizer.step()
 
-        sys.stdout.write('epoch: %d, [iter: %d / all %d], err_s_label: %f, err_s_domain: %f, err_t_domain: %f\n' \
-              % (epoch, i + 1, len_dataloader, err_s_label.data.cpu().numpy(),
-                 err_s_domain.data.cpu().numpy(), err_t_domain.data.cpu().item()))
-        sys.stdout.flush()
+        if i % 20 == 0:
+            sys.stdout.write(
+                "epoch: {epoch}, [iter: {batch} / all {total_batches}], err_s_label: {err_s_label}, err_s_domain: {err_s_domain}, err_t_domain: {err_t_domain}, err_t_label: {err_t_label}\n".format(
+                    epoch=epoch,
+                    batch=i,
+                    total_batches=len_dataloader,
+                    err_s_label=err_s_label.cpu().item(),
+                    err_s_domain=err_s_domain.cpu().item(),
+                    err_t_domain=err_t_domain.cpu().item(),
+                    err_t_label=err_t_label.cpu().item(),
+                )
+            )
+            # sys.stdout.write('epoch: %d, [iter: %d / all %d], err_s_label: %f, err_s_domain: %f, err_t_domain: %f\n' \
+            #     % (epoch, i + 1, len_dataloader, err_s_label.data.cpu().numpy(),
+            #         err_s_domain.data.cpu().numpy(), err_t_domain.data.cpu().item()))
+            sys.stdout.flush()
         # torch.save(my_net, '{0}/mnist_mnistm_model_epoch_current.pth'.format(model_root))
 
     # print('\n')
