@@ -211,7 +211,8 @@ for epoch in range(n_epoch):
         class_output, domain_output = my_net(input_data=t_img, alpha=alpha)
         err_t_label = loss_class(class_output, t_label)
         err_t_domain = loss_domain(domain_output, domain_label)
-        err = err_t_domain + err_t_label + err_s_domain + err_s_label
+        # err = err_t_domain + err_t_label + err_s_domain + err_s_label
+        err = err_t_label + err_s_label
         err.backward()
         optimizer.step()
 
