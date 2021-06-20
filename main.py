@@ -13,6 +13,8 @@ from torchvision import transforms
 from model import CNNModel
 from test import test
 
+from tf_dataset_getter  import get_shuffled_and_windowed_from_pregen_ds
+
 torch.set_default_dtype(torch.float64)
 
 
@@ -27,8 +29,6 @@ random.seed(manual_seed)
 torch.manual_seed(manual_seed)
 
 from steves_utils import utils
-from steves_utils.ORACLE.windowed_shuffled_dataset_accessor import Windowed_Shuffled_Dataset_Factory
-import tensorflow as tf
 
 batch_size = 64
 # batch_size = 1
@@ -36,74 +36,6 @@ ORIGINAL_BATCH_SIZE = 100
 
 source_distance = 50
 target_distance = 14
-
-def apply_dataset_pipeline(datasets):
-    """
-    Apply the appropriate dataset pipeline to the datasets returned from the Windowed_Shuffled_Dataset_Factory
-    """
-    train_ds = datasets["train_ds"]
-    val_ds = datasets["val_ds"]
-    test_ds = datasets["test_ds"]
-
-    # train_ds = train_ds.map(
-    #     lambda x: (x["IQ"],tf.one_hot(x["serial_number_id"], RANGE)),
-    #     num_parallel_calls=tf.data.AUTOTUNE,
-    #     deterministic=True
-    # )
-
-    # val_ds = val_ds.map(
-    #     lambda x: (x["IQ"],tf.one_hot(x["serial_number_id"], RANGE)),
-    #     num_parallel_calls=tf.data.AUTOTUNE,
-    #     deterministic=True
-    # )
-
-    # test_ds = test_ds.map(
-    #     lambda x: (x["IQ"],tf.one_hot(x["serial_number_id"], RANGE)),
-    #     num_parallel_calls=tf.data.AUTOTUNE,
-    #     deterministic=True
-    # )
-
-    train_ds = train_ds.map(
-        lambda x: (x["IQ"], x["serial_number_id"], x["distance_feet"]),
-        num_parallel_calls=tf.data.AUTOTUNE,
-        deterministic=True
-    )
-
-    val_ds = val_ds.map(
-        lambda x: (x["IQ"], x["serial_number_id"], x["distance_feet"]),
-        num_parallel_calls=tf.data.AUTOTUNE,
-        deterministic=True
-    )
-
-    test_ds = test_ds.map(
-        lambda x: (x["IQ"], x["serial_number_id"], x["distance_feet"]),
-        num_parallel_calls=tf.data.AUTOTUNE,
-        deterministic=True
-    )
-
-    train_ds = train_ds.unbatch()
-    val_ds = val_ds.unbatch()
-    test_ds = test_ds.unbatch()
-
-    train_ds = train_ds.shuffle(100 * ORIGINAL_BATCH_SIZE, reshuffle_each_iteration=True)
-    
-    train_ds = train_ds.batch(batch_size)
-    val_ds  = val_ds.batch(batch_size)
-    test_ds = test_ds.batch(batch_size)
-
-    train_ds = train_ds.prefetch(100)
-    val_ds   = val_ds.prefetch(100)
-    test_ds  = test_ds.prefetch(100)
-
-    return train_ds, val_ds, test_ds
-
-
-def get_shuffled_and_windowed_from_pregen_ds(path):
-    datasets = Windowed_Shuffled_Dataset_Factory(path)
-
-    return apply_dataset_pipeline(datasets)
-
-
 
 source_ds_path = "{datasets_base_path}/automated_windower/windowed_EachDevice-200k_batch-100_stride-20_distances-{distance}".format(
     datasets_base_path=utils.get_datasets_base_path(), distance=source_distance
@@ -115,8 +47,8 @@ target_ds_path = "{datasets_base_path}/automated_windower/windowed_EachDevice-20
 
 
 
-train_ds_source, val_ds_source, test_ds_source = get_shuffled_and_windowed_from_pregen_ds(source_ds_path)
-train_ds_target, val_ds_target, test_ds_target = get_shuffled_and_windowed_from_pregen_ds(target_ds_path)
+train_ds_target, val_ds_target, test_ds_target = get_shuffled_and_windowed_from_pregen_ds(target_ds_path, ORIGINAL_BATCH_SIZE, batch_size)
+train_ds_source, val_ds_source, test_ds_source = get_shuffled_and_windowed_from_pregen_ds(source_ds_path, ORIGINAL_BATCH_SIZE, batch_size)
 
 
 
@@ -268,7 +200,7 @@ for epoch in range(n_epoch):
     #     best_accu_t = accu_t
     #     torch.save(my_net, '{0}/mnist_mnistm_model_epoch_best.pth'.format(model_root))
 
-print('============ Summary ============= \n')
-print('Accuracy of the %s dataset: %f' % ('mnist', best_accu_s))
-print('Accuracy of the %s dataset: %f' % ('mnist_m', best_accu_t))
-print('Corresponding model was save in ' + model_root + '/mnist_mnistm_model_epoch_best.pth')
+# print('============ Summary ============= \n')
+# print('Accuracy of the %s dataset: %f' % ('mnist', best_accu_s))
+# print('Accuracy of the %s dataset: %f' % ('mnist_m', best_accu_t))
+# print('Corresponding model was save in ' + model_root + '/mnist_mnistm_model_epoch_best.pth')
