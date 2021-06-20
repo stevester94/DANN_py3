@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 
 import random
-import os
+import time
 import sys
 import torch.backends.cudnn as cudnn
 import torch.optim as optim
@@ -17,11 +17,12 @@ from tf_dataset_getter  import get_shuffled_and_windowed_from_pregen_ds
 
 torch.set_default_dtype(torch.float64)
 
+BATCH_LOGGING_DECIMATOION_FACTOR = 20
 
 cuda = True
 cudnn.benchmark = True
 lr = 0.0001
-n_epoch = 100
+n_epoch = 5
 model_root = "./model"
 
 manual_seed = 1337
@@ -65,10 +66,10 @@ train_ds_target, val_ds_target, test_ds_target = get_shuffled_and_windowed_from_
 # print("Done. Target Train DS Length:", num_batches_in_train_ds_target)
 
 print("We are hardcoding DS length!")
-# num_batches_in_train_ds_source = 50000
-# num_batches_in_train_ds_target = 50000
-num_batches_in_train_ds_source = 500
-num_batches_in_train_ds_target = 500
+num_batches_in_train_ds_source = 50000
+num_batches_in_train_ds_target = 50000
+# num_batches_in_train_ds_source = 500
+# num_batches_in_train_ds_target = 500
 
 my_net = CNNModel()
 
@@ -92,6 +93,7 @@ for p in my_net.parameters():
 
 # training
 best_accu_t = 0.0
+last_time = time.time()
 for epoch in range(n_epoch):
 
     len_dataloader = min(num_batches_in_train_ds_source, num_batches_in_train_ds_target)
@@ -128,23 +130,25 @@ for epoch in range(n_epoch):
         err_s_label = loss_class(class_output, s_label)
         err_s_domain = loss_domain(domain_output, s_domain)
 
-        # err = err_t_domain + err_t_label + err_s_domain + err_s_label
-        # err = err_t_domain + err_s_domain + err_s_label # Semi-supervised
         err = err_s_domain + err_s_label # Target completely ignored
-        # err = err_t_domain + err_s_domain
-        # err = err_t_label + err_s_label
+
 
         err.backward()
         optimizer.step()
 
-        if i % 20 == 0:
+        if i % BATCH_LOGGING_DECIMATOION_FACTOR == 0:
+            cur_time = time.time()
+            batches_per_second = BATCH_LOGGING_DECIMATOION_FACTOR / (cur_time - last_time)
+            last_time = cur_time
             sys.stdout.write(
                 (
                     "epoch: {epoch}, [iter: {batch} / all {total_batches}], "
+                    "batches_per_second: {batches_per_second}, "
                     "err_s_label: {err_s_label}, "
                     "err_s_domain: {err_s_domain},"
                     "alpha: {alpha}\n"
                 ).format(
+                        batches_per_second=batches_per_second,
                         epoch=epoch+1,
                         batch=i,
                         total_batches=len_dataloader,
@@ -159,7 +163,7 @@ for epoch in range(n_epoch):
     # accu_s = test(my_net, val_ds_source.as_numpy_iterator())
     # print("Val accuracy:", accu_s)
 
-    
+
     # accu_t = test(test_ds_target)
     # print('Accuracy of the %s dataset: %f\n' % ('Target', accu_t))
     # if accu_t > best_accu_t:
