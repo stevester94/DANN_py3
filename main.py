@@ -31,7 +31,7 @@ torch.manual_seed(manual_seed)
 
 from steves_utils import utils
 
-batch_size = 64
+batch_size = 128
 # batch_size = 1
 ORIGINAL_BATCH_SIZE = 100
 
@@ -53,23 +53,23 @@ train_ds_target, val_ds_target, test_ds_target = get_shuffled_and_windowed_from_
 
 
 
-# print("Unfortunately have to calculate the length of the source dataset by iterating over it. Standby...")
-# num_batches_in_train_ds_source = 0
-# for i in train_ds_source:
-#     num_batches_in_train_ds_source += 1
-# print("Done. Source Train DS Length:", num_batches_in_train_ds_source)
+print("Unfortunately have to calculate the length of the source dataset by iterating over it. Standby...")
+num_batches_in_train_ds_source = 0
+for i in train_ds_source:
+    num_batches_in_train_ds_source += 1
+print("Done. Source Train DS Length:", num_batches_in_train_ds_source)
 
-# print("Unfortunately have to calculate the length of the source dataset by iterating over it. Standby...")
-# num_batches_in_train_ds_target = 0
-# for i in train_ds_target:
-#     num_batches_in_train_ds_target += 1
-# print("Done. Target Train DS Length:", num_batches_in_train_ds_target)
+print("Unfortunately have to calculate the length of the source dataset by iterating over it. Standby...")
+num_batches_in_train_ds_target = 0
+for i in train_ds_target:
+    num_batches_in_train_ds_target += 1
+print("Done. Target Train DS Length:", num_batches_in_train_ds_target)
 
-print("We are hardcoding DS length!")
-num_batches_in_train_ds_source = 50000
-num_batches_in_train_ds_target = 50000
-# num_batches_in_train_ds_source = 500
-# num_batches_in_train_ds_target = 500
+# print("We are hardcoding DS length!")
+# num_batches_in_train_ds_source = 50000
+# num_batches_in_train_ds_target = 50000
+# num_batches_in_train_ds_source = 50
+# num_batches_in_train_ds_target = 50
 
 my_net = CNNModel()
 
@@ -160,8 +160,8 @@ for epoch in range(n_epoch):
 
             sys.stdout.flush()
 
-    # accu_s = test(my_net, val_ds_source.as_numpy_iterator())
-    # print("Val accuracy:", accu_s)
+    val = test(my_net, loss_class, loss_domain, val_ds_source.take(50).as_numpy_iterator())
+    print("Val label accuracy:{}, Val label loss:{}, Val domain loss: {}".format(*val))
 
 
     # accu_t = test(test_ds_target)
