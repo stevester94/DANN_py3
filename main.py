@@ -34,8 +34,8 @@ batch_size = 64
 # batch_size = 1
 ORIGINAL_BATCH_SIZE = 100
 
-source_distance = 50
-target_distance = 14
+source_distance = "2.8.14.20.26"
+target_distance = 32
 
 source_ds_path = "{datasets_base_path}/automated_windower/windowed_EachDevice-200k_batch-100_stride-20_distances-{distance}".format(
     datasets_base_path=utils.get_datasets_base_path(), distance=source_distance
@@ -47,26 +47,28 @@ target_ds_path = "{datasets_base_path}/automated_windower/windowed_EachDevice-20
 
 
 
-train_ds_target, val_ds_target, test_ds_target = get_shuffled_and_windowed_from_pregen_ds(target_ds_path, ORIGINAL_BATCH_SIZE, batch_size)
 train_ds_source, val_ds_source, test_ds_source = get_shuffled_and_windowed_from_pregen_ds(source_ds_path, ORIGINAL_BATCH_SIZE, batch_size)
+train_ds_target, val_ds_target, test_ds_target = get_shuffled_and_windowed_from_pregen_ds(target_ds_path, ORIGINAL_BATCH_SIZE, batch_size)
 
 
 
-print("Unfortunately have to calculate the length of the source dataset by iterating over it. Standby...")
-num_batches_in_train_ds_source = 0
-for i in train_ds_source:
-    num_batches_in_train_ds_source += 1
-print("Done. Source Train DS Length:", num_batches_in_train_ds_source)
+# print("Unfortunately have to calculate the length of the source dataset by iterating over it. Standby...")
+# num_batches_in_train_ds_source = 0
+# for i in train_ds_source:
+#     num_batches_in_train_ds_source += 1
+# print("Done. Source Train DS Length:", num_batches_in_train_ds_source)
 
-print("Unfortunately have to calculate the length of the source dataset by iterating over it. Standby...")
-num_batches_in_train_ds_target = 0
-for i in train_ds_target:
-    num_batches_in_train_ds_target += 1
-print("Done. Target Train DS Length:", num_batches_in_train_ds_target)
+# print("Unfortunately have to calculate the length of the source dataset by iterating over it. Standby...")
+# num_batches_in_train_ds_target = 0
+# for i in train_ds_target:
+#     num_batches_in_train_ds_target += 1
+# print("Done. Target Train DS Length:", num_batches_in_train_ds_target)
 
-# print("We are hardcoding DS length!")
+print("We are hardcoding DS length!")
 # num_batches_in_train_ds_source = 50000
 # num_batches_in_train_ds_target = 50000
+num_batches_in_train_ds_source = 500
+num_batches_in_train_ds_target = 500
 
 my_net = CNNModel()
 
@@ -94,7 +96,7 @@ for epoch in range(n_epoch):
 
     len_dataloader = min(num_batches_in_train_ds_source, num_batches_in_train_ds_target)
     data_source_iter = train_ds_source.as_numpy_iterator()
-    data_target_iter = train_ds_target.as_numpy_iterator()
+    # data_target_iter = train_ds_target.as_numpy_iterator()
 
     for i in range(len_dataloader):
 
@@ -109,55 +111,22 @@ for epoch in range(n_epoch):
 
         s_img = torch.from_numpy(s_img)
         s_label = torch.from_numpy(s_label).long()
+        s_domain = torch.from_numpy(s_domain).long()
 
         my_net.zero_grad()
-        batch_size = len(s_label)
-
-        domain_label = torch.ones(batch_size).double() * 50
 
         if cuda:
             s_img = s_img.cuda()
             s_label = s_label.cuda()
-            domain_label = domain_label.cuda()
+            s_domain = s_domain.cuda()
 
 
         class_output, domain_output = my_net(input_data=s_img, alpha=alpha)
-
         domain_output = torch.flatten(domain_output)
 
-        # print(domain_output)
 
         err_s_label = loss_class(class_output, s_label)
-        err_s_domain = loss_domain(domain_output, domain_label)
-
-        # print(domain_output.shape)
-        # print(domain_label.shape)
-        # sys.exit(1)
-
-        ####################################################
-        # training model using target data
-        ####################################################
-        data_target = data_target_iter.next()
-        t_img, t_label, t_domain = data_target
-        t_img = torch.from_numpy(t_img)
-        t_label = torch.from_numpy(t_label).long()
-
-        batch_size = len(t_img)
-
-        domain_label = torch.ones(batch_size).double() * 14
-
-        if cuda:
-            t_img = t_img.cuda()
-            domain_label = domain_label.cuda()
-            t_label = t_label.cuda()
-
-        class_output, domain_output = my_net(input_data=t_img, alpha=alpha)
-        domain_output = torch.flatten(domain_output)
-
-        # print(domain_output)
-
-        err_t_label = loss_class(class_output, t_label)
-        err_t_domain = loss_domain(domain_output, domain_label)
+        err_s_domain = loss_domain(domain_output, s_domain)
 
         # err = err_t_domain + err_t_label + err_s_domain + err_s_label
         # err = err_t_domain + err_s_domain + err_s_label # Semi-supervised
@@ -173,26 +142,24 @@ for epoch in range(n_epoch):
                 (
                     "epoch: {epoch}, [iter: {batch} / all {total_batches}], "
                     "err_s_label: {err_s_label}, "
-                    "err_t_label: {err_t_label}, "
-                    "err_s_domain: {err_s_domain}, "
-                    "err_t_domain: {err_t_domain}, "
-                    "\n"
+                    "err_s_domain: {err_s_domain},"
+                    "alpha: {alpha}\n"
                 ).format(
                         epoch=epoch+1,
                         batch=i,
                         total_batches=len_dataloader,
                         err_s_label=err_s_label.cpu().item(),
                         err_s_domain=err_s_domain.cpu().item(),
-                        err_t_domain=err_t_domain.cpu().item(),
-                        err_t_label=err_t_label.cpu().item(),
+                        alpha=alpha
                     )
             )
 
             sys.stdout.flush()
 
-    # print('\n')
-    # accu_s = test(test_ds_source)
-    # print('Accuracy of the %s dataset: %f' % ('Source', accu_s))
+    # accu_s = test(my_net, val_ds_source.as_numpy_iterator())
+    # print("Val accuracy:", accu_s)
+
+    
     # accu_t = test(test_ds_target)
     # print('Accuracy of the %s dataset: %f\n' % ('Target', accu_t))
     # if accu_t > best_accu_t:

@@ -1,72 +1,38 @@
-import os
 import torch.backends.cudnn as cudnn
 import torch.utils.data
-from torchvision import transforms
-from data_loader import GetLoader
-from torchvision import datasets
 
-class DummyDataset(torch.utils.data.Dataset):
-    def __init__(self, digit, c):
-        # self.t = torch.ones(2, 224).to(device)
-        self.t = torch.ones(2, 128) * digit
-        self.c = c
-
-    def __getitem__(self, index):
-        return (
-            self.t,
-            self.c
-        )
-
-    def __len__(self):
-        return 100000
-
-def test(dataset):
-    model_root = 'model'
-
+def test(model, np_iterator):
     cuda = True
     cudnn.benchmark = True
-    batch_size = 1024
     alpha = 0
 
-    dataloader = torch.utils.data.DataLoader(
-        dataset=dataset,
-        batch_size=batch_size,
-        # shuffle=False,
-        # num_workers=8
-    )
+    model = model.eval()
 
-    """ test """
-
-    my_net = torch.load(os.path.join(
-        model_root, 'mnist_mnistm_model_epoch_current.pth'
-    ))
-    my_net = my_net.eval()
 
     if cuda:
-        my_net = my_net.cuda()
-
-    len_dataloader = len(dataloader)
-    data_target_iter = iter(dataloader)
+        model = model.cuda()
 
     i = 0
     n_total = 0
     n_correct = 0
 
-    while i < len_dataloader:
+    for x,y,t in np_iterator:
 
         # test model using target data
-        data_target = data_target_iter.next()
-        t_img, t_label = data_target
+        x = torch.from_numpy(x)
+        y = torch.from_numpy(y).long()
+        t = torch.from_numpy(t).long()
 
-        batch_size = len(t_label)
+        batch_size = len(t)
 
         if cuda:
-            t_img = t_img.cuda()
-            t_label = t_label.cuda()
+            x = x.cuda()
+            y = y.cuda()
+            t = t.cuda()
 
-        class_output, _ = my_net(input_data=t_img, alpha=alpha)
-        pred = class_output.data.max(1, keepdim=True)[1]
-        n_correct += pred.eq(t_label.data.view_as(pred)).cpu().sum()
+        y_hat, _ = model(input_data=x, alpha=alpha)
+        pred = y_hat.data.max(1, keepdim=True)[1]
+        n_correct += pred.eq(t.data.view_as(pred)).cpu().sum()
         n_total += batch_size
 
         i += 1
