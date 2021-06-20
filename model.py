@@ -93,7 +93,7 @@ class CNNModel(nn.Module):
         self.domain_classifier.add_module('d_fc1', nn.Linear(50 * 58, 100))
         # self.domain_classifier.add_module('d_bn1', nn.BatchNorm1d(100))
         self.domain_classifier.add_module('d_relu1', nn.ReLU(False))
-        self.domain_classifier.add_module('d_fc2', nn.Linear(100, 2))
+        self.domain_classifier.add_module('d_fc2', nn.Linear(100, 1))
         # self.domain_classifier.add_module('d_softmax', nn.LogSoftmax(dim=1))
 
     def forward(self, input_data, alpha):

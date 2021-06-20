@@ -31,6 +31,7 @@ from steves_utils.ORACLE.windowed_shuffled_dataset_accessor import Windowed_Shuf
 import tensorflow as tf
 
 batch_size = 64
+# batch_size = 1
 ORIGINAL_BATCH_SIZE = 100
 
 source_distance = 50
@@ -63,19 +64,19 @@ def apply_dataset_pipeline(datasets):
     # )
 
     train_ds = train_ds.map(
-        lambda x: (x["IQ"], x["serial_number_id"]),
+        lambda x: (x["IQ"], x["serial_number_id"], x["distance_feet"]),
         num_parallel_calls=tf.data.AUTOTUNE,
         deterministic=True
     )
 
     val_ds = val_ds.map(
-        lambda x: (x["IQ"], x["serial_number_id"]),
+        lambda x: (x["IQ"], x["serial_number_id"], x["distance_feet"]),
         num_parallel_calls=tf.data.AUTOTUNE,
         deterministic=True
     )
 
     test_ds = test_ds.map(
-        lambda x: (x["IQ"], x["serial_number_id"]),
+        lambda x: (x["IQ"], x["serial_number_id"], x["distance_feet"]),
         num_parallel_calls=tf.data.AUTOTUNE,
         deterministic=True
     )
@@ -132,8 +133,8 @@ for i in train_ds_target:
 print("Done. Target Train DS Length:", num_batches_in_train_ds_target)
 
 # print("We are hardcoding DS length!")
-# num_batches_in_train_ds_source = 6250
-# num_batches_in_train_ds_target = 6250
+# num_batches_in_train_ds_source = 50000
+# num_batches_in_train_ds_target = 50000
 
 my_net = CNNModel()
 
@@ -142,7 +143,10 @@ my_net = CNNModel()
 optimizer = optim.Adam(my_net.parameters(), lr=lr)
 
 loss_class = torch.nn.CrossEntropyLoss()
-loss_domain = torch.nn.CrossEntropyLoss()
+# loss_domain = torch.nn.CrossEntropyLoss()
+loss_domain = torch.nn.L1Loss()
+# loss_domain = torch.nn.MSELoss()
+
 
 if cuda:
     my_net = my_net.cuda()
@@ -169,7 +173,7 @@ for epoch in range(n_epoch):
 
         # training model using source data
         data_source = data_source_iter.next()
-        s_img, s_label = data_source
+        s_img, s_label, s_domain = data_source
 
         s_img = torch.from_numpy(s_img)
         s_label = torch.from_numpy(s_label).long()
@@ -177,7 +181,7 @@ for epoch in range(n_epoch):
         my_net.zero_grad()
         batch_size = len(s_label)
 
-        domain_label = torch.zeros(batch_size).long()
+        domain_label = torch.ones(batch_size).double() * 50
 
         if cuda:
             s_img = s_img.cuda()
@@ -187,21 +191,28 @@ for epoch in range(n_epoch):
 
         class_output, domain_output = my_net(input_data=s_img, alpha=alpha)
 
+        domain_output = torch.flatten(domain_output)
+
+        # print(domain_output)
 
         err_s_label = loss_class(class_output, s_label)
         err_s_domain = loss_domain(domain_output, domain_label)
+
+        # print(domain_output.shape)
+        # print(domain_label.shape)
+        # sys.exit(1)
 
         ####################################################
         # training model using target data
         ####################################################
         data_target = data_target_iter.next()
-        t_img, t_label = data_target
+        t_img, t_label, t_domain = data_target
         t_img = torch.from_numpy(t_img)
         t_label = torch.from_numpy(t_label).long()
 
         batch_size = len(t_img)
 
-        domain_label = torch.ones(batch_size).long()
+        domain_label = torch.ones(batch_size).double() * 14
 
         if cuda:
             t_img = t_img.cuda()
@@ -209,24 +220,40 @@ for epoch in range(n_epoch):
             t_label = t_label.cuda()
 
         class_output, domain_output = my_net(input_data=t_img, alpha=alpha)
+        domain_output = torch.flatten(domain_output)
+
+        # print(domain_output)
+
         err_t_label = loss_class(class_output, t_label)
         err_t_domain = loss_domain(domain_output, domain_label)
-        err = err_t_domain + err_t_label + err_s_domain + err_s_label
+
+        # err = err_t_domain + err_t_label + err_s_domain + err_s_label
+        # err = err_t_domain + err_s_domain + err_s_label # Semi-supervised
+        err = err_s_domain + err_s_label # Target completely ignored
+        # err = err_t_domain + err_s_domain
         # err = err_t_label + err_s_label
+
         err.backward()
         optimizer.step()
 
         if i % 20 == 0:
             sys.stdout.write(
-                "epoch: {epoch}, [iter: {batch} / all {total_batches}], err_s_label: {err_s_label}, err_s_domain: {err_s_domain}, err_t_domain: {err_t_domain}, err_t_label: {err_t_label}\n".format(
-                    epoch=epoch,
-                    batch=i,
-                    total_batches=len_dataloader,
-                    err_s_label=err_s_label.cpu().item(),
-                    err_s_domain=err_s_domain.cpu().item(),
-                    err_t_domain=err_t_domain.cpu().item(),
-                    err_t_label=err_t_label.cpu().item(),
-                )
+                (
+                    "epoch: {epoch}, [iter: {batch} / all {total_batches}], "
+                    "err_s_label: {err_s_label}, "
+                    "err_t_label: {err_t_label}, "
+                    "err_s_domain: {err_s_domain}, "
+                    "err_t_domain: {err_t_domain}, "
+                    "\n"
+                ).format(
+                        epoch=epoch+1,
+                        batch=i,
+                        total_batches=len_dataloader,
+                        err_s_label=err_s_label.cpu().item(),
+                        err_s_domain=err_s_domain.cpu().item(),
+                        err_t_domain=err_t_domain.cpu().item(),
+                        err_t_label=err_t_label.cpu().item(),
+                    )
             )
 
             sys.stdout.flush()
