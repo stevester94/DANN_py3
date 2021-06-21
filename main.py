@@ -12,6 +12,7 @@ from torchvision import datasets
 from torchvision import transforms
 from model import CNNModel
 from test import test
+import json
 
 from tf_dataset_getter  import get_shuffled_and_windowed_from_pregen_ds
 
@@ -34,15 +35,35 @@ def plot_loss_curve(history):
     _do_loss_curve(history)
     plt.show()
 
+def save_loss_curve(history, path="./loss_curve.png"):
+    _do_loss_curve(history)
+    plt.savefig(path)
 
 BATCH_LOGGING_DECIMATION_FACTOR = 20
 NUM_LOGS_PER_EPOCH = 10
-
 cuda = True
 cudnn.benchmark = True
+
 lr = 0.0001
 n_epoch = 10
-model_root = "./model"
+batch_size = 128
+source_distance = "2.8.14.20.26"
+target_distance = 32
+alpha = 0.001
+num_additional_extractor_fc_layers=1
+
+
+if __name__ == "__main__":
+    j = json.loads(sys.stdin.read())
+
+    lr = j["lr"]
+    n_epoch = j["n_epoch"]
+    batch_size = j["batch_size"]
+    source_distance = j["source_distance"]
+    target_distance = j["target_distance"]
+    alpha = j["alpha"]
+    num_additional_extractor_fc_layers = j["num_additional_extractor_fc_layers"]
+
 
 manual_seed = 1337
 random.seed(manual_seed)
@@ -50,12 +71,8 @@ torch.manual_seed(manual_seed)
 
 from steves_utils import utils
 
-batch_size = 128
 # batch_size = 1
 ORIGINAL_BATCH_SIZE = 100
-
-source_distance = "2.8.14.20.26"
-target_distance = 32
 
 source_ds_path = "{datasets_base_path}/automated_windower/windowed_EachDevice-200k_batch-100_stride-20_distances-{distance}".format(
     datasets_base_path=utils.get_datasets_base_path(), distance=source_distance
@@ -72,25 +89,25 @@ train_ds_target, val_ds_target, test_ds_target = get_shuffled_and_windowed_from_
 
 
 
-# print("Unfortunately have to calculate the length of the source dataset by iterating over it. Standby...")
-# num_batches_in_train_ds_source = 0
-# for i in train_ds_source:
-#     num_batches_in_train_ds_source += 1
-# print("Done. Source Train DS Length:", num_batches_in_train_ds_source)
+print("Unfortunately have to calculate the length of the source dataset by iterating over it. Standby...")
+num_batches_in_train_ds_source = 0
+for i in train_ds_source:
+    num_batches_in_train_ds_source += 1
+print("Done. Source Train DS Length:", num_batches_in_train_ds_source)
 
-# print("Unfortunately have to calculate the length of the source dataset by iterating over it. Standby...")
-# num_batches_in_train_ds_target = 0
-# for i in train_ds_target:
-#     num_batches_in_train_ds_target += 1
-# print("Done. Target Train DS Length:", num_batches_in_train_ds_target)
+print("Unfortunately have to calculate the length of the source dataset by iterating over it. Standby...")
+num_batches_in_train_ds_target = 0
+for i in train_ds_target:
+    num_batches_in_train_ds_target += 1
+print("Done. Target Train DS Length:", num_batches_in_train_ds_target)
 
 # print("We are hardcoding DS length!")
-num_batches_in_train_ds_source = 25000
-num_batches_in_train_ds_target = 25000
+# num_batches_in_train_ds_source = 25000
+# num_batches_in_train_ds_target = 25000
 # num_batches_in_train_ds_source = 50
 # num_batches_in_train_ds_target = 50
 
-my_net = CNNModel()
+my_net = CNNModel(num_additional_extractor_fc_layers)
 
 # setup optimizer
 
@@ -134,11 +151,10 @@ for epoch in range(n_epoch):
     for i in range(num_batches_in_train_ds_source):
         log_this_batch = i in batches_to_log
 
-        p = float(i + epoch * num_batches_in_train_ds_source) / n_epoch / num_batches_in_train_ds_source
-        gamma = 10
-        alpha = 2. / (1. + np.exp(-gamma * p)) - 1
-
-        alpha = 0.0001
+        if alpha is None:
+            p = float(i + epoch * num_batches_in_train_ds_source) / n_epoch / num_batches_in_train_ds_source
+            gamma = 10
+            alpha = 2. / (1. + np.exp(-gamma * p)) - 1
 
         # alpha = 0
         # print(p)

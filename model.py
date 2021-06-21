@@ -7,7 +7,7 @@ from functions import ReverseLayerF
 
 class CNNModel(nn.Module):
 
-    def __init__(self):
+    def __init__(self, num_additional_extractor_fc_layers):
         super(CNNModel, self).__init__()
         self.feature = nn.Sequential()
         self.feature_2 = nn.Sequential()
@@ -54,8 +54,9 @@ class CNNModel(nn.Module):
         self.feature.add_module('f_drop1', nn.Dropout())
 
 
-        self.feature_2.add_module('f_fc1', nn.Linear(50 * 58 + 1, 256)) # t is also fed into the feature extractor
-        # self.feature_2.add_module('f_fc2', nn.Linear(256, 256))
+        self.feature_2.add_module('f_fc0', nn.Linear(50 * 58 + 1, 256)) # t is also fed into the feature extractor
+        for i in range(num_additional_extractor_fc_layers):
+            self.feature_2.add_module('f_fc{}'.format(i), nn.Linear(256, 256))
         # self.feature_2.add_module('f_fc3', nn.Linear(256, 256))
 
         # x = torch.ones(10, 2, 128)
