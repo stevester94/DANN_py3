@@ -106,7 +106,7 @@ for epoch in range(n_epoch):
         gamma = 10
         alpha = 2. / (1. + np.exp(-gamma * p)) - 1
 
-        alpha = p
+        alpha = 0.1
 
         # alpha = 0
         # print(p)
