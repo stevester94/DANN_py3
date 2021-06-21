@@ -55,8 +55,8 @@ class CNNModel(nn.Module):
 
 
         self.feature_2.add_module('f_fc1', nn.Linear(50 * 58 + 1, 256)) # t is also fed into the feature extractor
-        self.feature_2.add_module('f_fc2', nn.Linear(256, 256))
-        self.feature_2.add_module('f_fc3', nn.Linear(256, 256))
+        # self.feature_2.add_module('f_fc2', nn.Linear(256, 256))
+        # self.feature_2.add_module('f_fc3', nn.Linear(256, 256))
 
         # x = torch.ones(10, 2, 128)
         # print(self.feature(x).shape)
@@ -123,6 +123,8 @@ class CNNModel(nn.Module):
         
         class_output = self.class_classifier(feature_2)
         domain_output = self.domain_classifier(reverse_feature)
+
+        domain_output = torch.clamp(domain_output, 0, 30)
 
         # print(domain_output)
 

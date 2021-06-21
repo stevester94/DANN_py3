@@ -41,7 +41,7 @@ NUM_LOGS_PER_EPOCH = 10
 cuda = True
 cudnn.benchmark = True
 lr = 0.0001
-n_epoch = 2
+n_epoch = 10
 model_root = "./model"
 
 manual_seed = 1337
@@ -138,7 +138,7 @@ for epoch in range(n_epoch):
         gamma = 10
         alpha = 2. / (1. + np.exp(-gamma * p)) - 1
 
-        alpha = 0.1
+        alpha = 0.0001
 
         # alpha = 0
         # print(p)
