@@ -53,7 +53,7 @@ alpha = 0.001
 num_additional_extractor_fc_layers=1
 
 
-if __name__ == "__main__":
+if __name__ == "__main__" and len(sys.argv) == 1:
     j = json.loads(sys.stdin.read())
 
     lr = j["lr"]
@@ -71,8 +71,6 @@ if __name__ == "__main__":
     print("target_distance:", target_distance)
     print("alpha:", alpha)
     print("num_additional_extractor_fc_layers:", num_additional_extractor_fc_layers)
-
-    sys.exit(0)
 
 
 manual_seed = 1337

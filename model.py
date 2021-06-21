@@ -54,9 +54,9 @@ class CNNModel(nn.Module):
         self.feature.add_module('f_drop1', nn.Dropout())
 
 
-        self.feature_2.add_module('f_fc0', nn.Linear(50 * 58 + 1, 256)) # t is also fed into the feature extractor
+        self.feature_2.add_module('f2_fc0', nn.Linear(50 * 58 + 1, 256)) # t is also fed into the feature extractor
         for i in range(num_additional_extractor_fc_layers):
-            self.feature_2.add_module('f_fc{}'.format(i), nn.Linear(256, 256))
+            self.feature_2.add_module('f2_fc{}'.format(i+1), nn.Linear(256, 256))
         # self.feature_2.add_module('f_fc3', nn.Linear(256, 256))
 
         # x = torch.ones(10, 2, 128)
@@ -116,7 +116,8 @@ class CNNModel(nn.Module):
         
         t = torch.reshape(t, shape=(t.shape[0], 1))
 
-        feature_2 = self.feature_2(torch.cat((feature,t), dim=1))
+        feature_with_domain = torch.cat((feature,t), dim=1)
+        feature_2 = self.feature_2(feature_with_domain)
         # print("Feature View:", feature.shape)
 
         reverse_feature = ReverseLayerF.apply(feature_2, alpha)

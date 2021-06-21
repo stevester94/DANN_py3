@@ -8,3 +8,4 @@ dataset/MNIST
 *.png
 logs
 *png
+experiment_name
