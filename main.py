@@ -22,7 +22,7 @@ BATCH_LOGGING_DECIMATOION_FACTOR = 20
 cuda = True
 cudnn.benchmark = True
 lr = 0.0001
-n_epoch = 5
+n_epoch = 10
 model_root = "./model"
 
 manual_seed = 1337
@@ -103,7 +103,13 @@ for epoch in range(n_epoch):
     for i in range(len_dataloader):
 
         p = float(i + epoch * len_dataloader) / n_epoch / len_dataloader
-        alpha = 2. / (1. + np.exp(-10 * p)) - 1
+        gamma = 10
+        alpha = 2. / (1. + np.exp(-gamma * p)) - 1
+
+        alpha = p
+
+        # alpha = 0
+        # print(p)
 
         # print("Alpha", alpha)
 
