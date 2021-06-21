@@ -64,6 +64,16 @@ if __name__ == "__main__":
     alpha = j["alpha"]
     num_additional_extractor_fc_layers = j["num_additional_extractor_fc_layers"]
 
+    print("lr:", lr)
+    print("n_epoch:", n_epoch)
+    print("batch_size:", batch_size)
+    print("source_distance:", source_distance)
+    print("target_distance:", target_distance)
+    print("alpha:", alpha)
+    print("num_additional_extractor_fc_layers:", num_additional_extractor_fc_layers)
+
+    sys.exit(0)
+
 
 manual_seed = 1337
 random.seed(manual_seed)
@@ -238,7 +248,7 @@ for epoch in range(n_epoch):
             print("Val label accuracy:{}, Val label loss:{}, Val domain loss: {}".format(
                 val_label_accuracy, val_label_loss, val_domain_loss))
 
-plot_loss_curve(history)
+save_loss_curve(history)
     # accu_t = test(test_ds_target)
     # print('Accuracy of the %s dataset: %f\n' % ('Target', accu_t))
     # if accu_t > best_accu_t:
