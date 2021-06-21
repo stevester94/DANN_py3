@@ -29,7 +29,7 @@ def test(model, label_loss_func, domain_loss_func, np_iterator):
             y = y.cuda()
             t = t.cuda()
 
-        y_hat, t_hat = model(input_data=x, alpha=alpha)
+        y_hat, t_hat = model(input_data=x, t=t, alpha=alpha)
         t_hat = torch.flatten(t_hat)
         
         pred = y_hat.data.max(1, keepdim=True)[1]

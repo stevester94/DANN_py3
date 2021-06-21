@@ -53,21 +53,21 @@ train_ds_target, val_ds_target, test_ds_target = get_shuffled_and_windowed_from_
 
 
 
-print("Unfortunately have to calculate the length of the source dataset by iterating over it. Standby...")
-num_batches_in_train_ds_source = 0
-for i in train_ds_source:
-    num_batches_in_train_ds_source += 1
-print("Done. Source Train DS Length:", num_batches_in_train_ds_source)
+# print("Unfortunately have to calculate the length of the source dataset by iterating over it. Standby...")
+# num_batches_in_train_ds_source = 0
+# for i in train_ds_source:
+#     num_batches_in_train_ds_source += 1
+# print("Done. Source Train DS Length:", num_batches_in_train_ds_source)
 
-print("Unfortunately have to calculate the length of the source dataset by iterating over it. Standby...")
-num_batches_in_train_ds_target = 0
-for i in train_ds_target:
-    num_batches_in_train_ds_target += 1
-print("Done. Target Train DS Length:", num_batches_in_train_ds_target)
+# print("Unfortunately have to calculate the length of the source dataset by iterating over it. Standby...")
+# num_batches_in_train_ds_target = 0
+# for i in train_ds_target:
+#     num_batches_in_train_ds_target += 1
+# print("Done. Target Train DS Length:", num_batches_in_train_ds_target)
 
 # print("We are hardcoding DS length!")
-# num_batches_in_train_ds_source = 50000
-# num_batches_in_train_ds_target = 50000
+num_batches_in_train_ds_source = 25000
+num_batches_in_train_ds_target = 25000
 # num_batches_in_train_ds_source = 50
 # num_batches_in_train_ds_target = 50
 
@@ -123,7 +123,7 @@ for epoch in range(n_epoch):
             s_domain = s_domain.cuda()
 
 
-        class_output, domain_output = my_net(input_data=s_img, alpha=alpha)
+        class_output, domain_output = my_net(input_data=s_img, t=s_domain, alpha=alpha)
         domain_output = torch.flatten(domain_output)
 
 

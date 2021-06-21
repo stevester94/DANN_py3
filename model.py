@@ -1,4 +1,5 @@
 import numpy
+from tensorflow.python.ops.gen_array_ops import shape
 import torch
 import torch.nn as nn
 from functions import ReverseLayerF
@@ -9,6 +10,7 @@ class CNNModel(nn.Module):
     def __init__(self):
         super(CNNModel, self).__init__()
         self.feature = nn.Sequential()
+        self.feature_2 = nn.Sequential()
         import torch
 
         # My shit
@@ -51,6 +53,11 @@ class CNNModel(nn.Module):
         self.feature.add_module('f_relu2', nn.ReLU(False))
         self.feature.add_module('f_drop1', nn.Dropout())
 
+
+        self.feature_2.add_module('f_fc1', nn.Linear(50 * 58 + 1, 256)) # t is also fed into the feature extractor
+        self.feature_2.add_module('f_fc2', nn.Linear(256, 256))
+        self.feature_2.add_module('f_fc3', nn.Linear(256, 256))
+
         # x = torch.ones(10, 2, 128)
         # print(self.feature(x).shape)
         # import sys
@@ -79,7 +86,7 @@ class CNNModel(nn.Module):
 
 
         self.class_classifier = nn.Sequential()
-        self.class_classifier.add_module('c_fc1', nn.Linear(50 * 58, 256))
+        self.class_classifier.add_module('c_fc1', nn.Linear(256, 256))
         # self.class_classifier.add_module('c_bn1', nn.BatchNorm1d(100))
         self.class_classifier.add_module('c_relu1', nn.ReLU(False))
         self.class_classifier.add_module('c_drop1', nn.Dropout())
@@ -90,13 +97,13 @@ class CNNModel(nn.Module):
         # self.class_classifier.add_module('c_softmax', nn.LogSoftmax(dim=1))
 
         self.domain_classifier = nn.Sequential()
-        self.domain_classifier.add_module('d_fc1', nn.Linear(50 * 58, 100))
+        self.domain_classifier.add_module('d_fc1', nn.Linear(256, 100))
         # self.domain_classifier.add_module('d_bn1', nn.BatchNorm1d(100))
         self.domain_classifier.add_module('d_relu1', nn.ReLU(False))
         self.domain_classifier.add_module('d_fc2', nn.Linear(100, 1))
         # self.domain_classifier.add_module('d_softmax', nn.LogSoftmax(dim=1))
 
-    def forward(self, input_data, alpha):
+    def forward(self, input_data, t, alpha):
         # print("input_data:", input_data.shape)
 
         # Doesn't change anything
@@ -105,12 +112,16 @@ class CNNModel(nn.Module):
         # print("feature:", feature.shape)
 
         feature = feature.view(-1, 50 * 58)
+        
+        t = torch.reshape(t, shape=(t.shape[0], 1))
+
+        feature_2 = self.feature_2(torch.cat((feature,t), dim=1))
         # print("Feature View:", feature.shape)
 
-        reverse_feature = ReverseLayerF.apply(feature, alpha)
+        reverse_feature = ReverseLayerF.apply(feature_2, alpha)
         # print("Reverse Feature:", feature.shape)
         
-        class_output = self.class_classifier(feature)
+        class_output = self.class_classifier(feature_2)
         domain_output = self.domain_classifier(reverse_feature)
 
         # print(domain_output)
