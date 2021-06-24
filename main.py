@@ -88,6 +88,7 @@ if __name__ == "__main__" and len(sys.argv) == 1:
     experiment_name = j["experiment_name"]
     patience = j["patience"]
 
+    print("experiment_name:", experiment_name)
     print("lr:", lr)
     print("n_epoch:", n_epoch)
     print("batch_size:", batch_size)
@@ -95,6 +96,7 @@ if __name__ == "__main__" and len(sys.argv) == 1:
     print("target_distance:", target_distance)
     print("alpha:", alpha)
     print("num_additional_extractor_fc_layers:", num_additional_extractor_fc_layers)
+    print("patience:", patience)
 
 
 manual_seed = 1337
@@ -121,23 +123,23 @@ train_ds_target, val_ds_target, test_ds_target = get_shuffled_and_windowed_from_
 
 
 
-# print("Unfortunately have to calculate the length of the source dataset by iterating over it. Standby...")
-# num_batches_in_train_ds_source = 0
-# for i in train_ds_source:
-#     num_batches_in_train_ds_source += 1
-# print("Done. Source Train DS Length:", num_batches_in_train_ds_source)
+print("Unfortunately have to calculate the length of the source dataset by iterating over it. Standby...")
+num_batches_in_train_ds_source = 0
+for i in train_ds_source:
+    num_batches_in_train_ds_source += 1
+print("Done. Source Train DS Length:", num_batches_in_train_ds_source)
 
-# print("Unfortunately have to calculate the length of the source dataset by iterating over it. Standby...")
-# num_batches_in_train_ds_target = 0
-# for i in train_ds_target:
-#     num_batches_in_train_ds_target += 1
-# print("Done. Target Train DS Length:", num_batches_in_train_ds_target)
+print("Unfortunately have to calculate the length of the source dataset by iterating over it. Standby...")
+num_batches_in_train_ds_target = 0
+for i in train_ds_target:
+    num_batches_in_train_ds_target += 1
+print("Done. Target Train DS Length:", num_batches_in_train_ds_target)
 
-print("We are hardcoding DS length!")
-num_batches_in_train_ds_source = 25000
-num_batches_in_train_ds_target = 25000
-num_batches_in_train_ds_source = 250
-num_batches_in_train_ds_target = 250
+# print("We are hardcoding DS length!")
+# num_batches_in_train_ds_source = 25000
+# num_batches_in_train_ds_target = 25000
+# num_batches_in_train_ds_source = 250
+# num_batches_in_train_ds_target = 250
 
 my_net = CNNModel(num_additional_extractor_fc_layers)
 
@@ -253,10 +255,10 @@ for epoch in range(1,n_epoch+1):
             sys.stdout.flush()
 
     source_val_label_accuracy, source_val_label_loss, source_val_domain_loss = \
-        test(my_net, loss_class, loss_domain, val_ds_source.take(5).as_numpy_iterator())
+        test(my_net, loss_class, loss_domain, val_ds_source.as_numpy_iterator())
     
     target_val_label_accuracy, target_val_label_loss, target_val_domain_loss = \
-        test(my_net, loss_class, loss_domain, val_ds_target.take(5).as_numpy_iterator())
+        test(my_net, loss_class, loss_domain, val_ds_target.as_numpy_iterator())
 
     history["indices"].append(epoch)
     history["source_val_label_loss"].append(source_val_label_loss)
@@ -316,10 +318,10 @@ save_loss_curve(history)
     #     best_accu_t = accu_t
 
 source_test_label_accuracy, source_test_label_loss, source_test_domain_loss = \
-    test(my_net, loss_class, loss_domain, val_ds_source.take(5).as_numpy_iterator())
+    test(my_net, loss_class, loss_domain, val_ds_source.as_numpy_iterator())
 
 target_test_label_accuracy, target_test_label_loss, target_test_domain_loss = \
-    test(my_net, loss_class, loss_domain, val_ds_target.take(5).as_numpy_iterator())
+    test(my_net, loss_class, loss_domain, val_ds_target.as_numpy_iterator())
 
 stop_time_secs = time.time()
 total_time_secs = stop_time_secs - start_time_secs
