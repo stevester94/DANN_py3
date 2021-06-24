@@ -21,14 +21,21 @@ torch.set_default_dtype(torch.float64)
 
 import matplotlib.pyplot as plt
 def _do_loss_curve(history):
+    figure, axis = plt.subplots(2, 1)
     plt.figure()
-    plt.title('Losses')
-    plt.plot(history["indices"], history['val_label_loss'], label='Validation Label Loss')
-    plt.plot(history["indices"], history['val_domain_loss'], label='Validation Domain Loss')
-    plt.plot(history["indices"], history['train_label_loss'], label='Train Label Loss')
-    plt.plot(history["indices"], history['train_domain_loss'], label='Train Domain Loss')
-    plt.legend()
-    plt.xlabel('Epoch')
+    axis[0,0].title("Label Loss")
+    axis[0,0].plot(history["indices"], history['val_label_loss'], label='Validation Label Loss')
+    axis[0,0].plot(history["indices"], history['val_domain_loss'], label='Validation Domain Loss')
+    axis[0,0].plot(history["indices"], history['train_label_loss'], label='Train Label Loss')
+    axis[0,0].legend()
+    axis[0,0].xlabel('Epoch')
+
+    axis[1,0].title("Domain Loss")
+    axis[1,0].plot(history["indices"], history['val_label_loss'], label='Validation Label Loss')
+    axis[1,0].plot(history["indices"], history['val_domain_loss'], label='Validation Domain Loss')
+    axis[1,0].plot(history["indices"], history['train_label_loss'], label='Train Label Loss')
+    axis[1,0].legend()
+    axis[1,0].xlabel('Epoch')
 
 
 def plot_loss_curve(history):
@@ -40,7 +47,6 @@ def save_loss_curve(history, path="./loss_curve.png"):
     plt.savefig(path)
 
 BATCH_LOGGING_DECIMATION_FACTOR = 20
-NUM_LOGS_PER_EPOCH = 10
 cuda = True
 cudnn.benchmark = True
 
@@ -142,22 +148,22 @@ last_time = time.time()
 
 history = {}
 history["indices"] = []
-history["val_label_loss"] = []
-history["val_domain_loss"] = []
-history["train_label_loss"] = []
-history["train_domain_loss"] = []
+history["source_val_label_loss"] = []
+history["source_val_domain_loss"] = []
+history["target_val_label_loss"] = []
+history["target_val_domain_loss"] = []
+history["source_train_label_loss"] = []
+history["source_train_domain_loss"] = []
 
 for epoch in range(n_epoch):
 
     data_source_iter = train_ds_source.as_numpy_iterator()
     # data_target_iter = train_ds_target.as_numpy_iterator()
 
-    batches_to_log = np.linspace(1, num_batches_in_train_ds_source, NUM_LOGS_PER_EPOCH, dtype=int)
     err_s_label_epoch = 0
     err_s_domain_epoch = 0
 
     for i in range(num_batches_in_train_ds_source):
-        log_this_batch = i in batches_to_log
 
         if alpha is None:
             p = float(i + epoch * num_batches_in_train_ds_source) / n_epoch / num_batches_in_train_ds_source
@@ -225,26 +231,21 @@ for epoch in range(n_epoch):
 
             sys.stdout.flush()
 
-        if log_this_batch:
-            print("Logging this batch")
-            val_label_accuracy, val_label_loss, val_domain_loss = \
-                test(my_net, loss_class, loss_domain, val_ds_source.as_numpy_iterator())
-            
-            print(
-                val_label_loss,
-                val_domain_loss,
-                err_s_label_epoch / i,
-                err_s_domain_epoch / i,
-            )
+    source_val_label_accuracy, source_val_label_loss, source_val_domain_loss = \
+        test(my_net, loss_class, loss_domain, val_ds_source.as_numpy_iterator())
+    
+    target_val_label_accuracy, target_val_label_loss, target_val_domain_loss = \
+        test(my_net, loss_class, loss_domain, val_ds_target.as_numpy_iterator())
 
-            history["indices"].append(epoch + i/num_batches_in_train_ds_source)
-            history["val_label_loss"].append(val_label_loss)
-            history["val_domain_loss"].append(val_domain_loss)
-            history["train_label_loss"].append(err_s_label_epoch / i)
-            history["train_domain_loss"].append(err_s_domain_epoch / i)
+    history["indices"].append(epoch)
+    history["source_val_label_loss"].append(source_val_label_loss)
+    history["source_val_domain_loss"].append(source_val_domain_loss)
+    history["target_val_label_loss"].append(target_val_label_loss)
+    history["target_val_domain_loss"].append(target_val_domain_loss)
+    history["source_train_label_loss"].append(err_s_label_epoch / i)
+    history["source_train_domain_loss"].append(err_s_domain_epoch / i)
 
-            print("Val label accuracy:{}, Val label loss:{}, Val domain loss: {}".format(
-                val_label_accuracy, val_label_loss, val_domain_loss))
+
 
 save_loss_curve(history)
     # accu_t = test(test_ds_target)
