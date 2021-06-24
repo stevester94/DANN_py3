@@ -22,20 +22,31 @@ torch.set_default_dtype(torch.float64)
 import matplotlib.pyplot as plt
 def _do_loss_curve(history):
     figure, axis = plt.subplots(2, 1)
-    plt.figure()
-    axis[0,0].title("Label Loss")
-    axis[0,0].plot(history["indices"], history['val_label_loss'], label='Validation Label Loss')
-    axis[0,0].plot(history["indices"], history['val_domain_loss'], label='Validation Domain Loss')
-    axis[0,0].plot(history["indices"], history['train_label_loss'], label='Train Label Loss')
-    axis[0,0].legend()
-    axis[0,0].xlabel('Epoch')
 
-    axis[1,0].title("Domain Loss")
-    axis[1,0].plot(history["indices"], history['val_label_loss'], label='Validation Label Loss')
-    axis[1,0].plot(history["indices"], history['val_domain_loss'], label='Validation Domain Loss')
-    axis[1,0].plot(history["indices"], history['train_label_loss'], label='Train Label Loss')
-    axis[1,0].legend()
-    axis[1,0].xlabel('Epoch')
+    figure.set_size_inches(12, 12)
+    figure.suptitle("Loss During Training")
+    plt.subplots_adjust(hspace=0.4)
+    plt.rcParams['figure.dpi'] = 600
+    
+    axis[0].set_title("Label Loss")
+    axis[0].plot(history["indices"], history['source_val_label_loss'], label='Source Validation Label Loss')
+    axis[0].plot(history["indices"], history['source_train_label_loss'], label='Source Train Label Loss')
+    axis[0].plot(history["indices"], history['target_val_label_loss'], label='Target Validation Label Loss')
+    axis[0].legend()
+    axis[0].grid()
+    axis[0].set(xlabel='Epoch', ylabel="CrossEntropy Loss")
+    axis[0].locator_params(axis="x", integer=True, tight=True)
+    
+    # axis[0].xlabel('Epoch')
+
+    axis[1].set_title("Domain Loss")
+    axis[1].plot(history["indices"], history['target_val_domain_loss'], label='Source Validation Domain Loss')
+    axis[1].plot(history["indices"], history['source_train_domain_loss'], label='Source Train Domain Loss')
+    axis[1].plot(history["indices"], history['source_val_domain_loss'], label='Target Validation Domain Loss')
+    axis[1].legend()
+    axis[1].grid()
+    axis[1].set(xlabel='Epoch', ylabel="L1 Loss")
+    axis[1].locator_params(axis="x", integer=True, tight=True)
 
 
 def plot_loss_curve(history):
@@ -51,7 +62,7 @@ cuda = True
 cudnn.benchmark = True
 
 lr = 0.0001
-n_epoch = 10
+n_epoch = 20
 batch_size = 128
 source_distance = "2.8.14.20.26"
 target_distance = 32
@@ -103,23 +114,23 @@ train_ds_target, val_ds_target, test_ds_target = get_shuffled_and_windowed_from_
 
 
 
-print("Unfortunately have to calculate the length of the source dataset by iterating over it. Standby...")
-num_batches_in_train_ds_source = 0
-for i in train_ds_source:
-    num_batches_in_train_ds_source += 1
-print("Done. Source Train DS Length:", num_batches_in_train_ds_source)
+# print("Unfortunately have to calculate the length of the source dataset by iterating over it. Standby...")
+# num_batches_in_train_ds_source = 0
+# for i in train_ds_source:
+#     num_batches_in_train_ds_source += 1
+# print("Done. Source Train DS Length:", num_batches_in_train_ds_source)
 
-print("Unfortunately have to calculate the length of the source dataset by iterating over it. Standby...")
-num_batches_in_train_ds_target = 0
-for i in train_ds_target:
-    num_batches_in_train_ds_target += 1
-print("Done. Target Train DS Length:", num_batches_in_train_ds_target)
+# print("Unfortunately have to calculate the length of the source dataset by iterating over it. Standby...")
+# num_batches_in_train_ds_target = 0
+# for i in train_ds_target:
+#     num_batches_in_train_ds_target += 1
+# print("Done. Target Train DS Length:", num_batches_in_train_ds_target)
 
-# print("We are hardcoding DS length!")
-# num_batches_in_train_ds_source = 25000
-# num_batches_in_train_ds_target = 25000
-# num_batches_in_train_ds_source = 50
-# num_batches_in_train_ds_target = 50
+print("We are hardcoding DS length!")
+num_batches_in_train_ds_source = 25000
+num_batches_in_train_ds_target = 25000
+num_batches_in_train_ds_source = 5
+num_batches_in_train_ds_target = 5
 
 my_net = CNNModel(num_additional_extractor_fc_layers)
 
@@ -232,10 +243,10 @@ for epoch in range(n_epoch):
             sys.stdout.flush()
 
     source_val_label_accuracy, source_val_label_loss, source_val_domain_loss = \
-        test(my_net, loss_class, loss_domain, val_ds_source.as_numpy_iterator())
+        test(my_net, loss_class, loss_domain, val_ds_source.take(5).as_numpy_iterator())
     
     target_val_label_accuracy, target_val_label_loss, target_val_domain_loss = \
-        test(my_net, loss_class, loss_domain, val_ds_target.as_numpy_iterator())
+        test(my_net, loss_class, loss_domain, val_ds_target.take(5).as_numpy_iterator())
 
     history["indices"].append(epoch)
     history["source_val_label_loss"].append(source_val_label_loss)
