@@ -9,3 +9,4 @@ dataset/MNIST
 logs
 *png
 experiment_name
+results.csv

@@ -16,6 +16,9 @@ import json
 
 from tf_dataset_getter  import get_shuffled_and_windowed_from_pregen_ds
 
+
+start_time_secs = time.time()
+
 torch.set_default_dtype(torch.float64)
 
 
@@ -68,7 +71,8 @@ source_distance = "2.8.14.20.26"
 target_distance = 32
 alpha = 0.001
 num_additional_extractor_fc_layers=1
-
+experiment_name = "Fill Me ;)"
+patience = "TBD"
 
 if __name__ == "__main__" and len(sys.argv) == 1:
     j = json.loads(sys.stdin.read())
@@ -265,6 +269,69 @@ save_loss_curve(history)
     #     best_accu_s = accu_s
     #     best_accu_t = accu_t
     #     torch.save(my_net, '{0}/mnist_mnistm_model_epoch_best.pth'.format(model_root))
+
+source_test_label_accuracy, source_test_label_loss, source_test_domain_loss = \
+    test(my_net, loss_class, loss_domain, val_ds_source.take(5).as_numpy_iterator())
+
+target_test_label_accuracy, target_test_label_loss, target_test_domain_loss = \
+    test(my_net, loss_class, loss_domain, val_ds_target.take(5).as_numpy_iterator())
+
+stop_time_secs = time.time()
+total_time_secs = stop_time_secs - start_time_secs
+
+with open("results.txt", "w") as f:
+    out = ""
+    out += "Experiment name: {}\n".format(
+        experiment_name
+    )
+
+    out += "Source Test Label Acc: {test_label_acc}, Source Test Label Loss: {test_label_loss}, Source Test Domain Loss: {test_domain_loss}\n".format(
+        test_label_acc=source_test_label_accuracy,
+        test_label_loss=source_test_label_loss,
+        test_domain_loss=source_test_domain_loss,
+    )
+
+    out += "Target Test Label Acc: {test_label_acc}, Target Test Label Loss: {test_label_loss}, Target Test Domain Loss: {test_domain_loss}\n".format(
+        test_label_acc=target_test_label_accuracy,
+        test_label_loss=target_test_label_loss,
+        test_domain_loss=target_test_domain_loss,
+    )
+
+    out += "total time seconds: {}\n".format(total_time_secs)
+    print(out)
+    f.write(out)
+
+
+with open("results.csv", "w") as f:
+    header = "NAME,SOURCE_DISTANCE,TARGET_DISTANCE,LEARNING_RATE,ALPHA,BATCH,EPOCHS,PATIENCE,"
+    header += "SOURCE_TEST_LABEL_LOSS,SOURCE_TEST_LABEL_ACC,SOURCE_TEST_DOMAIN_LOSS,"
+    header += "TARGET_TEST_LABEL_LOSS,TARGET_TEST_LABEL_ACC,TARGET_TEST_DOMAIN_LOSS,TOTAL_TIME_SECS\n"
+
+
+    row = "{NAME},{SOURCE_DISTANCE},{TARGET_DISTANCE},{LEARNING_RATE},{ALPHA},{BATCH},{EPOCHS},{PATIENCE},"
+    row += "{SOURCE_TEST_LABEL_LOSS},{SOURCE_TEST_LABEL_ACC},{SOURCE_TEST_DOMAIN_LOSS},"
+    row += "{TARGET_TEST_LABEL_LOSS},{TARGET_TEST_LABEL_ACC},{TARGET_TEST_DOMAIN_LOSS},{TOTAL_TIME_SECS}\n"
+
+    row = row.format(
+        NAME=experiment_name,
+        SOURCE_DISTANCE=source_distance,
+        TARGET_DISTANCE=target_distance,
+        LEARNING_RATE=lr,
+        ALPHA=alpha,
+        BATCH=batch_size,
+        EPOCHS=n_epoch,
+        PATIENCE=patience,
+        SOURCE_TEST_LABEL_LOSS=source_test_label_loss,
+        SOURCE_TEST_LABEL_ACC= source_test_label_accuracy,
+        SOURCE_TEST_DOMAIN_LOSS=source_test_domain_loss,
+        TARGET_TEST_LABEL_LOSS=target_test_label_loss,
+        TARGET_TEST_LABEL_ACC=target_test_label_accuracy,
+        TARGET_TEST_DOMAIN_LOSS=target_test_domain_loss,
+        TOTAL_TIME_SECS=total_time_secs,
+    )
+
+    f.write(header)
+    f.write(row)
 
 # print('============ Summary ============= \n')
 # print('Accuracy of the %s dataset: %f' % ('mnist', best_accu_s))
