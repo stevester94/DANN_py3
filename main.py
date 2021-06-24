@@ -61,18 +61,19 @@ def save_loss_curve(history, path="./loss_curve.png"):
     plt.savefig(path)
 
 BATCH_LOGGING_DECIMATION_FACTOR = 20
+BEST_MODEL_PATH = "./best_model.pth"
 cuda = True
 cudnn.benchmark = True
 
 lr = 0.0001
-n_epoch = 20
+n_epoch = 2000
 batch_size = 128
 source_distance = "2.8.14.20.26"
 target_distance = 32
 alpha = 0.001
 num_additional_extractor_fc_layers=1
 experiment_name = "Fill Me ;)"
-patience = "TBD"
+patience = 10
 
 if __name__ == "__main__" and len(sys.argv) == 1:
     j = json.loads(sys.stdin.read())
@@ -84,6 +85,8 @@ if __name__ == "__main__" and len(sys.argv) == 1:
     target_distance = j["target_distance"]
     alpha = j["alpha"]
     num_additional_extractor_fc_layers = j["num_additional_extractor_fc_layers"]
+    experiment_name = j["experiment_name"]
+    patience = j["patience"]
 
     print("lr:", lr)
     print("n_epoch:", n_epoch)
@@ -133,8 +136,8 @@ train_ds_target, val_ds_target, test_ds_target = get_shuffled_and_windowed_from_
 print("We are hardcoding DS length!")
 num_batches_in_train_ds_source = 25000
 num_batches_in_train_ds_target = 25000
-num_batches_in_train_ds_source = 5
-num_batches_in_train_ds_target = 5
+num_batches_in_train_ds_source = 250
+num_batches_in_train_ds_target = 250
 
 my_net = CNNModel(num_additional_extractor_fc_layers)
 
@@ -170,7 +173,8 @@ history["target_val_domain_loss"] = []
 history["source_train_label_loss"] = []
 history["source_train_domain_loss"] = []
 
-for epoch in range(n_epoch):
+best_epoch_index_and_combined_val_label_loss = [0, float("inf")]
+for epoch in range(1,n_epoch+1):
 
     data_source_iter = train_ds_source.as_numpy_iterator()
     # data_target_iter = train_ds_target.as_numpy_iterator()
@@ -229,13 +233,13 @@ for epoch in range(n_epoch):
             sys.stdout.write(
                 (
                     "epoch: {epoch}, [iter: {batch} / all {total_batches}], "
-                    "batches_per_second: {batches_per_second}, "
-                    "err_s_label: {err_s_label}, "
-                    "err_s_domain: {err_s_domain},"
-                    "alpha: {alpha}\n"
+                    "batches_per_second: {batches_per_second:.4f}, "
+                    "err_s_label: {err_s_label:.4f}, "
+                    "err_s_domain: {err_s_domain:.4f}, "
+                    "alpha: {alpha:.4f}\n"
                 ).format(
                         batches_per_second=batches_per_second,
-                        epoch=epoch+1,
+                        epoch=epoch,
                         batch=i,
                         total_batches=num_batches_in_train_ds_source,
                         err_s_label=err_s_label.cpu().item(),
@@ -260,7 +264,45 @@ for epoch in range(n_epoch):
     history["source_train_label_loss"].append(err_s_label_epoch / i)
     history["source_train_domain_loss"].append(err_s_domain_epoch / i)
 
+    sys.stdout.write(
+        (
+            "=============================================================\n"
+            "epoch: {epoch}, "
+            "acc_src_val_label: {source_val_label_accuracy:.4f}, "
+            "err_src_val_label: {source_val_label_loss:.4f}, "
+            "err_src_val_domain: {source_val_domain_loss:.4f}, "
+            "acc_trgt_val_label: {target_val_label_accuracy:.4f}, "
+            "err_trgt_val_label: {target_val_label_loss:.4f}, "
+            "err_trgt_val_domain: {target_val_domain_loss:.4f}"
+            "\n"
+            "=============================================================\n"
+        ).format(
+                epoch=epoch,
+                source_val_label_accuracy=source_val_label_accuracy,
+                source_val_label_loss=source_val_label_loss,
+                source_val_domain_loss=source_val_domain_loss,
+                target_val_label_accuracy=target_val_label_accuracy,
+                target_val_label_loss=target_val_label_loss,
+                target_val_domain_loss=target_val_domain_loss,
+            )
+    )
 
+    sys.stdout.flush()
+
+    combined_val_label_loss = source_val_label_loss + target_val_label_loss
+    if best_epoch_index_and_combined_val_label_loss[1] > combined_val_label_loss:
+        print("New best")
+        best_epoch_index_and_combined_val_label_loss[0] = epoch
+        best_epoch_index_and_combined_val_label_loss[1] = combined_val_label_loss
+        torch.save(my_net, BEST_MODEL_PATH)
+    
+    elif epoch - best_epoch_index_and_combined_val_label_loss[0] > patience:
+        print("Patience ({}) exhausted".format(patience))
+        break
+
+
+print("Loading best model from epoch {} with combined loss of {}".format(*best_epoch_index_and_combined_val_label_loss))
+my_net = torch.load(BEST_MODEL_PATH)
 
 save_loss_curve(history)
     # accu_t = test(test_ds_target)
@@ -268,7 +310,6 @@ save_loss_curve(history)
     # if accu_t > best_accu_t:
     #     best_accu_s = accu_s
     #     best_accu_t = accu_t
-    #     torch.save(my_net, '{0}/mnist_mnistm_model_epoch_best.pth'.format(model_root))
 
 source_test_label_accuracy, source_test_label_loss, source_test_domain_loss = \
     test(my_net, loss_class, loss_domain, val_ds_source.take(5).as_numpy_iterator())
