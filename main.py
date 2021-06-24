@@ -172,6 +172,8 @@ history["target_val_label_loss"] = []
 history["target_val_domain_loss"] = []
 history["source_train_label_loss"] = []
 history["source_train_domain_loss"] = []
+history["source_val_label_accuracy"] = []
+history["target_val_label_accuracy"] = []
 
 best_epoch_index_and_combined_val_label_loss = [0, float("inf")]
 for epoch in range(1,n_epoch+1):
@@ -263,6 +265,8 @@ for epoch in range(1,n_epoch+1):
     history["target_val_domain_loss"].append(target_val_domain_loss)
     history["source_train_label_loss"].append(err_s_label_epoch / i)
     history["source_train_domain_loss"].append(err_s_domain_epoch / i)
+    history["source_val_label_accuracy"].append(source_val_label_accuracy)
+    history["target_val_label_accuracy"].append(target_val_label_accuracy)
 
     sys.stdout.write(
         (
@@ -374,7 +378,23 @@ with open("results.csv", "w") as f:
     f.write(header)
     f.write(row)
 
-# print('============ Summary ============= \n')
-# print('Accuracy of the %s dataset: %f' % ('mnist', best_accu_s))
-# print('Accuracy of the %s dataset: %f' % ('mnist_m', best_accu_t))
-# print('Corresponding model was save in ' + model_root + '/mnist_mnistm_model_epoch_best.pth')
+# Save history to csv
+with open("loss.csv", "w") as f:
+    f.write("epoch,source_val_label_loss,source_val_domain_loss,target_val_label_loss,target_val_domain_loss,source_train_label_loss,source_train_domain_loss,source_val_label_accuracy,target_val_label_accuracy\n")
+    for i in range(len(history["indices"])):
+        f.write(
+            ",".join(
+                (
+                    str(i),
+                    str(history["source_val_label_loss"][i]),
+                    str(history["source_val_domain_loss"][i]),
+                    str(history["target_val_label_loss"][i]),
+                    str(history["target_val_domain_loss"][i]),
+                    str(history["source_train_label_loss"][i]),
+                    str(history["source_train_domain_loss"][i]),
+                    str(history["source_val_label_accuracy"][i]),
+                    str(history["target_val_label_accuracy"][i]),
+                )
+            )
+        )
+        f.write("\n")
