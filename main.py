@@ -87,6 +87,7 @@ if __name__ == "__main__" and len(sys.argv) == 1:
     num_additional_extractor_fc_layers = j["num_additional_extractor_fc_layers"]
     experiment_name = j["experiment_name"]
     patience = j["patience"]
+    seed = j["seed"]
 
     print("experiment_name:", experiment_name)
     print("lr:", lr)
@@ -99,9 +100,8 @@ if __name__ == "__main__" and len(sys.argv) == 1:
     print("patience:", patience)
 
 
-manual_seed = 1337
-random.seed(manual_seed)
-torch.manual_seed(manual_seed)
+random.seed(seed)
+torch.manual_seed(seed)
 
 from steves_utils import utils
 

@@ -115,10 +115,9 @@ class CNNModel(nn.Module):
 
         feature = feature.view(-1, 50 * 58)
         
-        t = torch.reshape(t, shape=(t.shape[0], 1))
-
-        feature_with_domain = torch.cat((feature,t), dim=1)
-        feature_2 = self.feature_2(feature_with_domain)
+        # t = torch.reshape(t, shape=(t.shape[0], 1))
+        # feature_with_domain = torch.cat((feature,t), dim=1)
+        # feature_2 = self.feature_2(feature_with_domain)
 
         feature_2 = self.feature_2(feature)
 
