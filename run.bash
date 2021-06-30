@@ -12,8 +12,9 @@ for src_distance in "2.8.14.20.26"; do
 for target_distance in 32; do
 for alpha in 0.001; do
 for num_additional_extractor_fc_layers in 1; do
-for seed in 8646 25792 15474 5133 30452 17665 27354 17752; do
-    experiment_name=dann.cida.yolo_tipoff-no_seed-${seed}_src.distance-${src_distance}_targetDistance-${target_distance}_alpha-${alpha}_learningRate-${learning_rate}_batch-${batch_size}_epochs-${epochs}_numAdditionalExtractorLayers-${num_additional_extractor_fc_layers}
+# for seed in 8646 25792 15474 5133 30452 17665 27354 17752; do
+for seed in 8646; do
+    experiment_name=dann.cida.yolo_tipoff-yes_seed-${seed}_src.distance-${src_distance}_targetDistance-${target_distance}_alpha-${alpha}_learningRate-${learning_rate}_batch-${batch_size}_epochs-${epochs}_numAdditionalExtractorLayers-${num_additional_extractor_fc_layers}
     echo "Begin $experiment_name" | tee logs
     rm -rf *png logs experiment_name
     echo $experiment_name > experiment_name
