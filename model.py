@@ -1,5 +1,3 @@
-import numpy
-from tensorflow.python.ops.gen_array_ops import shape
 import torch
 import torch.nn as nn
 from functions import ReverseLayerF

@@ -14,7 +14,15 @@ from model import CNNModel
 from test import test
 import json
 
-from tf_dataset_getter  import get_shuffled_and_windowed_from_pregen_ds
+
+import steves_utils.ORACLE.torch as ORACLE_Torch
+from steves_utils.ORACLE.utils_v2 import (
+    ALL_DISTANCES_FEET,
+    ALL_SERIAL_NUMBERS,
+    ALL_RUNS
+)
+
+# from tf_dataset_getter  import get_shuffled_and_windowed_from_pregen_ds
 
 
 start_time_secs = time.time()
@@ -67,13 +75,14 @@ cudnn.benchmark = True
 
 lr = 0.0001
 n_epoch = 2000
-batch_size = 128
+batch_size = 2
 source_distance = "2.8.14.20.26"
 target_distance = 32
 alpha = 0.001
 num_additional_extractor_fc_layers=1
 experiment_name = "Fill Me ;)"
 patience = 10
+seed = 1337
 
 if __name__ == "__main__" and len(sys.argv) == 1:
     j = json.loads(sys.stdin.read())
@@ -103,43 +112,64 @@ if __name__ == "__main__" and len(sys.argv) == 1:
 random.seed(seed)
 torch.manual_seed(seed)
 
-from steves_utils import utils
-
-# batch_size = 1
-ORIGINAL_BATCH_SIZE = 100
-
-source_ds_path = "{datasets_base_path}/automated_windower/windowed_EachDevice-200k_batch-100_stride-20_distances-{distance}".format(
-    datasets_base_path=utils.get_datasets_base_path(), distance=source_distance
+source_ds = ORACLE_Torch.ORACLE_Torch_Dataset(
+                desired_serial_numbers=ALL_SERIAL_NUMBERS,
+                desired_distances=ALL_DISTANCES_FEET,
+                desired_runs=ALL_RUNS,
+                window_length=256,
+                window_stride=1,
+                num_examples_per_device=10000,
+                seed=1337,  
+                max_cache_size=100000*16,
+)
+target_ds = ORACLE_Torch.ORACLE_Torch_Dataset(
+                desired_serial_numbers=ALL_SERIAL_NUMBERS,
+                desired_distances=ALL_DISTANCES_FEET,
+                desired_runs=ALL_RUNS,
+                window_length=256,
+                window_stride=1,
+                num_examples_per_device=10000,
+                seed=1337,  
+                max_cache_size=100000*16,
 )
 
-target_ds_path = "{datasets_base_path}/automated_windower/windowed_EachDevice-200k_batch-100_stride-20_distances-{distance}".format(
-    datasets_base_path=utils.get_datasets_base_path(), distance=target_distance
+def wrap_datasets_in_dataloaders(datasets, **kwargs):
+    dataloaders = []
+    for ds in datasets:
+        dataloaders.append(
+            torch.utils.data.DataLoader(
+                ds,
+                **kwargs
+            )
+        )
+    
+    return dataloaders
+
+source_train_ds, source_val_ds, source_test_ds = ORACLE_Torch.split_dataset_by_percentage(0.7, 0.15, 0.15, source_ds, seed)
+target_train_ds, target_val_ds, target_test_ds = ORACLE_Torch.split_dataset_by_percentage(0.7, 0.15, 0.15, target_ds, seed)
+
+source_train_dl, source_val_dl, source_test_dl = wrap_datasets_in_dataloaders(
+    (source_train_ds, source_val_ds, source_test_ds),
+    batch_size=batch_size,
+    shuffle=True,
+    num_workers=2,
+    persistent_workers=True,
+    prefetch_factor=2
+)
+target_train_dl, target_val_dl, target_test_dl = wrap_datasets_in_dataloaders(
+    (target_train_ds, target_val_ds, target_test_ds),
+    batch_size=batch_size,
+    shuffle=True,
+    num_workers=2,
+    persistent_workers=True,
+    prefetch_factor=2
 )
 
+# for i in range(10):
+#     for i in source_train_dl:
+#         pass
 
-
-train_ds_source, val_ds_source, test_ds_source = get_shuffled_and_windowed_from_pregen_ds(source_ds_path, ORIGINAL_BATCH_SIZE, batch_size)
-train_ds_target, val_ds_target, test_ds_target = get_shuffled_and_windowed_from_pregen_ds(target_ds_path, ORIGINAL_BATCH_SIZE, batch_size)
-
-
-
-print("Unfortunately have to calculate the length of the source dataset by iterating over it. Standby...")
-num_batches_in_train_ds_source = 0
-for i in train_ds_source:
-    num_batches_in_train_ds_source += 1
-print("Done. Source Train DS Length:", num_batches_in_train_ds_source)
-
-print("Unfortunately have to calculate the length of the source dataset by iterating over it. Standby...")
-num_batches_in_train_ds_target = 0
-for i in train_ds_target:
-    num_batches_in_train_ds_target += 1
-print("Done. Target Train DS Length:", num_batches_in_train_ds_target)
-
-# print("We are hardcoding DS length!")
-# num_batches_in_train_ds_source = 25000
-# num_batches_in_train_ds_target = 25000
-# num_batches_in_train_ds_source = 250
-# num_batches_in_train_ds_target = 250
+# sys.exit(0)
 
 my_net = CNNModel(num_additional_extractor_fc_layers)
 
@@ -180,16 +210,16 @@ history["target_val_label_accuracy"] = []
 best_epoch_index_and_combined_val_label_loss = [0, float("inf")]
 for epoch in range(1,n_epoch+1):
 
-    data_source_iter = train_ds_source.as_numpy_iterator()
+    data_source_iter = iter(target_train_dl)
     # data_target_iter = train_ds_target.as_numpy_iterator()
 
     err_s_label_epoch = 0
     err_s_domain_epoch = 0
 
-    for i in range(num_batches_in_train_ds_source):
+    for i in range(len(source_train_dl)):
 
         if alpha is None:
-            p = float(i + epoch * num_batches_in_train_ds_source) / n_epoch / num_batches_in_train_ds_source
+            p = float(i + epoch * source_train_dl) / n_epoch / source_train_dl
             gamma = 10
             alpha = 2. / (1. + np.exp(-gamma * p)) - 1
 
@@ -200,9 +230,13 @@ for epoch in range(1,n_epoch+1):
 
         # training model using source data
         data_source = data_source_iter.next()
-        s_img, s_label, s_domain = data_source
+        print(data_source)
+        # s_img, s_label, s_domain = data_source
+        s_img = data_source["iq"]
+        s_label = data_source["serial_number"]
+        s_domain = data_source["distance_ft"]
 
-        s_img = torch.from_numpy(s_img)
+        # s_img = torch.from_numpy(s_img)
         s_label = torch.from_numpy(s_label).long()
         s_domain = torch.from_numpy(s_domain).long()
 
@@ -245,7 +279,7 @@ for epoch in range(1,n_epoch+1):
                         batches_per_second=batches_per_second,
                         epoch=epoch,
                         batch=i,
-                        total_batches=num_batches_in_train_ds_source,
+                        total_batches=source_train_dl,
                         err_s_label=err_s_label.cpu().item(),
                         err_s_domain=err_s_domain.cpu().item(),
                         alpha=alpha
