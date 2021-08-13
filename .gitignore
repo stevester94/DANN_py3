@@ -11,3 +11,4 @@ logs
 experiment_name
 results.csv
 loss.csv
+results/

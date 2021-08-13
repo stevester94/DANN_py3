@@ -7,13 +7,13 @@ import torch.backends.cudnn as cudnn
 import torch.optim as optim
 import torch.utils.data
 import numpy as np
-from data_loader import GetLoader
-from torchvision import datasets
-from torchvision import transforms
 from model import CNNModel
-from test import test
-import json
 
+import json
+import os
+
+from test import test
+from plotting import save_loss_curve
 
 import steves_utils.ORACLE.torch as ORACLE_Torch
 from steves_utils.ORACLE.utils_v2 import (
@@ -23,68 +23,36 @@ from steves_utils.ORACLE.utils_v2 import (
     serial_number_to_id
 )
 
-# from tf_dataset_getter  import get_shuffled_and_windowed_from_pregen_ds
-
 
 start_time_secs = time.time()
 
 torch.set_default_dtype(torch.float64)
 
 
-import matplotlib.pyplot as plt
-def _do_loss_curve(history):
-    figure, axis = plt.subplots(2, 1)
-
-    figure.set_size_inches(12, 12)
-    figure.suptitle("Loss During Training")
-    plt.subplots_adjust(hspace=0.4)
-    plt.rcParams['figure.dpi'] = 600
-    
-    axis[0].set_title("Label Loss")
-    axis[0].plot(history["indices"], history['source_val_label_loss'], label='Source Validation Label Loss')
-    axis[0].plot(history["indices"], history['source_train_label_loss'], label='Source Train Label Loss')
-    axis[0].plot(history["indices"], history['target_val_label_loss'], label='Target Validation Label Loss')
-    axis[0].legend()
-    axis[0].grid()
-    axis[0].set(xlabel='Epoch', ylabel="CrossEntropy Loss")
-    axis[0].locator_params(axis="x", integer=True, tight=True)
-    
-    # axis[0].xlabel('Epoch')
-
-    axis[1].set_title("Domain Loss")
-    axis[1].plot(history["indices"], history['target_val_domain_loss'], label='Source Validation Domain Loss')
-    axis[1].plot(history["indices"], history['source_train_domain_loss'], label='Source Train Domain Loss')
-    axis[1].plot(history["indices"], history['source_val_domain_loss'], label='Target Validation Domain Loss')
-    axis[1].legend()
-    axis[1].grid()
-    axis[1].set(xlabel='Epoch', ylabel="L1 Loss")
-    axis[1].locator_params(axis="x", integer=True, tight=True)
-
-
-def plot_loss_curve(history):
-    _do_loss_curve(history)
-    plt.show()
-
-def save_loss_curve(history, path="./loss_curve.png"):
-    _do_loss_curve(history)
-    plt.savefig(path)
-
 BATCH_LOGGING_DECIMATION_FACTOR = 20
-BEST_MODEL_PATH = "./best_model.pth"
+RESULTS_PATH = "./results/"
+try:
+    os.mkdir(RESULTS_PATH)
+except FileExistsError:
+    print("results dir exists, continuing")
+BEST_MODEL_PATH = RESULTS_PATH+"./best_model.pth"
 cuda = True
 cudnn.benchmark = True
 
+
+
 lr = 0.0001
-n_epoch = 5
+n_epoch = 2
 batch_size = 32
-source_distance = "2.8.14.20.26"
-target_distance = 32
+source_distance = [2,8,14,20,26]
+target_distance = [32]
+desired_serial_numbers = ALL_SERIAL_NUMBERS[:4]
 alpha = 0.001
 num_additional_extractor_fc_layers=1
 experiment_name = "Fill Me ;)"
 patience = 10
 seed = 1337
-num_examples_per_device=1000
+num_examples_per_device=10000
 
 if __name__ == "__main__" and len(sys.argv) == 1:
     j = json.loads(sys.stdin.read())
@@ -115,8 +83,8 @@ random.seed(seed)
 torch.manual_seed(seed)
 
 source_ds = ORACLE_Torch.ORACLE_Torch_Dataset(
-                desired_serial_numbers=ALL_SERIAL_NUMBERS,
-                desired_distances=ALL_DISTANCES_FEET,
+                desired_serial_numbers=desired_serial_numbers,
+                desired_distances=source_distance,
                 desired_runs=ALL_RUNS,
                 window_length=256,
                 window_stride=1,
@@ -127,8 +95,8 @@ source_ds = ORACLE_Torch.ORACLE_Torch_Dataset(
 )
 
 target_ds = ORACLE_Torch.ORACLE_Torch_Dataset(
-                desired_serial_numbers=ALL_SERIAL_NUMBERS,
-                desired_distances=ALL_DISTANCES_FEET,
+                desired_serial_numbers=desired_serial_numbers,
+                desired_distances=target_distance,
                 desired_runs=ALL_RUNS,
                 window_length=256,
                 window_stride=1,
@@ -228,7 +196,7 @@ for epoch in range(1,n_epoch+1):
             gamma = 10
             alpha = 2. / (1. + np.exp(-gamma * p)) - 1
 
-        # alpha = 0
+        alpha = 0
         # print(p)
 
         # print("Alpha", alpha)
@@ -350,7 +318,7 @@ for epoch in range(1,n_epoch+1):
 print("Loading best model from epoch {} with combined loss of {}".format(*best_epoch_index_and_combined_val_label_loss))
 my_net = torch.load(BEST_MODEL_PATH)
 
-save_loss_curve(history)
+save_loss_curve(history, RESULTS_PATH+"loss_curve.png")
     # accu_t = test(test_ds_target)
     # print('Accuracy of the %s dataset: %f\n' % ('Target', accu_t))
     # if accu_t > best_accu_t:
@@ -366,7 +334,7 @@ target_test_label_accuracy, target_test_label_loss, target_test_domain_loss = \
 stop_time_secs = time.time()
 total_time_secs = stop_time_secs - start_time_secs
 
-with open("results.txt", "w") as f:
+with open(RESULTS_PATH+"results.txt", "w") as f:
     out = ""
     out += "Experiment name: {}\n".format(
         experiment_name
@@ -389,7 +357,7 @@ with open("results.txt", "w") as f:
     f.write(out)
 
 
-with open("results.csv", "w") as f:
+with open(RESULTS_PATH+"results.csv", "w") as f:
     header = "NAME,SOURCE_DISTANCE,TARGET_DISTANCE,LEARNING_RATE,ALPHA,BATCH,EPOCHS,PATIENCE,"
     header += "SOURCE_TEST_LABEL_LOSS,SOURCE_TEST_LABEL_ACC,SOURCE_TEST_DOMAIN_LOSS,"
     header += "TARGET_TEST_LABEL_LOSS,TARGET_TEST_LABEL_ACC,TARGET_TEST_DOMAIN_LOSS,TOTAL_TIME_SECS\n"
@@ -421,7 +389,7 @@ with open("results.csv", "w") as f:
     f.write(row)
 
 # Save history to csv
-with open("loss.csv", "w") as f:
+with open(RESULTS_PATH+"loss.csv", "w") as f:
     f.write("epoch,source_val_label_loss,source_val_domain_loss,target_val_label_loss,target_val_domain_loss,source_train_label_loss,source_train_domain_loss,source_val_label_accuracy,target_val_label_accuracy\n")
     for i in range(len(history["indices"])):
         f.write(
