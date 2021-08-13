@@ -17,9 +17,9 @@ def test(model, label_loss_func, domain_loss_func, np_iterator):
     for x,y,t in np_iterator:
 
         # test model using target data
-        x = torch.from_numpy(x)
-        y = torch.from_numpy(y).long()
-        t = torch.from_numpy(t).long()
+        # x = torch.from_numpy(x)
+        # y = torch.from_numpy(y).long()
+        # t = torch.from_numpy(t).long()
 
         batch_size = len(t)
 

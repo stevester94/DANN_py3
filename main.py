@@ -19,7 +19,8 @@ import steves_utils.ORACLE.torch as ORACLE_Torch
 from steves_utils.ORACLE.utils_v2 import (
     ALL_DISTANCES_FEET,
     ALL_SERIAL_NUMBERS,
-    ALL_RUNS
+    ALL_RUNS,
+    serial_number_to_id
 )
 
 # from tf_dataset_getter  import get_shuffled_and_windowed_from_pregen_ds
@@ -75,7 +76,7 @@ cudnn.benchmark = True
 
 lr = 0.0001
 n_epoch = 2000
-batch_size = 2
+batch_size = 32
 source_distance = "2.8.14.20.26"
 target_distance = 32
 alpha = 0.001
@@ -83,6 +84,7 @@ num_additional_extractor_fc_layers=1
 experiment_name = "Fill Me ;)"
 patience = 10
 seed = 1337
+num_examples_per_device=1000
 
 if __name__ == "__main__" and len(sys.argv) == 1:
     j = json.loads(sys.stdin.read())
@@ -118,19 +120,22 @@ source_ds = ORACLE_Torch.ORACLE_Torch_Dataset(
                 desired_runs=ALL_RUNS,
                 window_length=256,
                 window_stride=1,
-                num_examples_per_device=10000,
+                num_examples_per_device=num_examples_per_device,
                 seed=1337,  
                 max_cache_size=100000*16,
+                transform_func=lambda x: (x["iq"], serial_number_to_id(x["serial_number"]), x["distance_ft"])
 )
+
 target_ds = ORACLE_Torch.ORACLE_Torch_Dataset(
                 desired_serial_numbers=ALL_SERIAL_NUMBERS,
                 desired_distances=ALL_DISTANCES_FEET,
                 desired_runs=ALL_RUNS,
                 window_length=256,
                 window_stride=1,
-                num_examples_per_device=10000,
+                num_examples_per_device=num_examples_per_device,
                 seed=1337,  
                 max_cache_size=100000*16,
+                transform_func=lambda x: (x["iq"], serial_number_to_id(x["serial_number"]), x["distance_ft"])
 )
 
 def wrap_datasets_in_dataloaders(datasets, **kwargs):
@@ -152,17 +157,17 @@ source_train_dl, source_val_dl, source_test_dl = wrap_datasets_in_dataloaders(
     (source_train_ds, source_val_ds, source_test_ds),
     batch_size=batch_size,
     shuffle=True,
-    num_workers=2,
+    num_workers=5,
     persistent_workers=True,
-    prefetch_factor=2
+    prefetch_factor=10
 )
 target_train_dl, target_val_dl, target_test_dl = wrap_datasets_in_dataloaders(
     (target_train_ds, target_val_ds, target_test_ds),
     batch_size=batch_size,
     shuffle=True,
-    num_workers=2,
+    num_workers=5,
     persistent_workers=True,
-    prefetch_factor=2
+    prefetch_factor=10
 )
 
 # for i in range(10):
@@ -210,7 +215,7 @@ history["target_val_label_accuracy"] = []
 best_epoch_index_and_combined_val_label_loss = [0, float("inf")]
 for epoch in range(1,n_epoch+1):
 
-    data_source_iter = iter(target_train_dl)
+    data_source_iter = iter(source_train_dl)
     # data_target_iter = train_ds_target.as_numpy_iterator()
 
     err_s_label_epoch = 0
@@ -230,15 +235,16 @@ for epoch in range(1,n_epoch+1):
 
         # training model using source data
         data_source = data_source_iter.next()
-        print(data_source)
-        # s_img, s_label, s_domain = data_source
-        s_img = data_source["iq"]
-        s_label = data_source["serial_number"]
-        s_domain = data_source["distance_ft"]
+        # print(data_source)
+        s_img, s_label, s_domain = data_source
+
+        # s_img = data_source["iq"]
+        # s_label = data_source["serial_number"]
+        # s_domain = data_source["distance_ft"]
 
         # s_img = torch.from_numpy(s_img)
-        s_label = torch.from_numpy(s_label).long()
-        s_domain = torch.from_numpy(s_domain).long()
+        # s_label = torch.from_numpy(s_label).long()
+        # s_domain = torch.from_numpy(s_domain).long()
 
         my_net.zero_grad()
 
@@ -279,7 +285,7 @@ for epoch in range(1,n_epoch+1):
                         batches_per_second=batches_per_second,
                         epoch=epoch,
                         batch=i,
-                        total_batches=source_train_dl,
+                        total_batches=len(source_train_dl),
                         err_s_label=err_s_label.cpu().item(),
                         err_s_domain=err_s_domain.cpu().item(),
                         alpha=alpha
@@ -289,10 +295,10 @@ for epoch in range(1,n_epoch+1):
             sys.stdout.flush()
 
     source_val_label_accuracy, source_val_label_loss, source_val_domain_loss = \
-        test(my_net, loss_class, loss_domain, val_ds_source.as_numpy_iterator())
+        test(my_net, loss_class, loss_domain, source_val_dl)
     
     target_val_label_accuracy, target_val_label_loss, target_val_domain_loss = \
-        test(my_net, loss_class, loss_domain, val_ds_target.as_numpy_iterator())
+        test(my_net, loss_class, loss_domain, target_val_dl)
 
     history["indices"].append(epoch)
     history["source_val_label_loss"].append(source_val_label_loss)
