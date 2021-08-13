@@ -75,7 +75,7 @@ cuda = True
 cudnn.benchmark = True
 
 lr = 0.0001
-n_epoch = 2000
+n_epoch = 5
 batch_size = 32
 source_distance = "2.8.14.20.26"
 target_distance = 32
@@ -358,10 +358,10 @@ save_loss_curve(history)
     #     best_accu_t = accu_t
 
 source_test_label_accuracy, source_test_label_loss, source_test_domain_loss = \
-    test(my_net, loss_class, loss_domain, val_ds_source.as_numpy_iterator())
+    test(my_net, loss_class, loss_domain, source_test_dl)
 
 target_test_label_accuracy, target_test_label_loss, target_test_domain_loss = \
-    test(my_net, loss_class, loss_domain, val_ds_target.as_numpy_iterator())
+    test(my_net, loss_class, loss_domain, target_test_dl)
 
 stop_time_secs = time.time()
 total_time_secs = stop_time_secs - start_time_secs
