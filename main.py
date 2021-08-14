@@ -10,7 +10,6 @@ import numpy as np
 from model import CNNModel
 
 import json
-import os
 
 from test import test
 from plotting import save_loss_curve
@@ -24,37 +23,29 @@ from steves_utils.ORACLE.utils_v2 import (
 )
 
 
-start_time_secs = time.time()
-
 torch.set_default_dtype(torch.float64)
 
 
 BATCH_LOGGING_DECIMATION_FACTOR = 20
 RESULTS_PATH = "./results/"
 try:
+    import os, shutil
     os.mkdir(RESULTS_PATH)
 except FileExistsError:
-    print("results dir exists, continuing")
+    print("results dir exists, deleting then recreating")
+    shutil.rmtree(RESULTS_PATH)
+    os.mkdir(RESULTS_PATH)
+
 BEST_MODEL_PATH = RESULTS_PATH+"./best_model.pth"
 cuda = True
 cudnn.benchmark = True
 
 
 
-lr = 0.0001
-n_epoch = 2
-batch_size = 32
-source_distance = [2,8,14,20,26]
-target_distance = [32]
-desired_serial_numbers = ALL_SERIAL_NUMBERS[:4]
-alpha = 0.001
-num_additional_extractor_fc_layers=1
-experiment_name = "Fill Me ;)"
-patience = 10
-seed = 1337
-num_examples_per_device=10000
 
-if __name__ == "__main__" and len(sys.argv) == 1:
+
+
+if __name__ == "__main__"  and len(sys.argv) == 1:
     j = json.loads(sys.stdin.read())
 
     lr = j["lr"]
@@ -62,47 +53,62 @@ if __name__ == "__main__" and len(sys.argv) == 1:
     batch_size = j["batch_size"]
     source_distance = j["source_distance"]
     target_distance = j["target_distance"]
+    desired_serial_numbers = j["desired_serial_numbers"]
     alpha = j["alpha"]
     num_additional_extractor_fc_layers = j["num_additional_extractor_fc_layers"]
     experiment_name = j["experiment_name"]
     patience = j["patience"]
     seed = j["seed"]
+    num_examples_per_device = j["num_examples_per_device"]
+    window_stride = j["window_stride"]
+    window_length = j["window_length"]
+    desired_runs = j["desired_runs"]
 
-    print("experiment_name:", experiment_name)
-    print("lr:", lr)
-    print("n_epoch:", n_epoch)
-    print("batch_size:", batch_size)
-    print("source_distance:", source_distance)
-    print("target_distance:", target_distance)
-    print("alpha:", alpha)
-    print("num_additional_extractor_fc_layers:", num_additional_extractor_fc_layers)
-    print("patience:", patience)
+    print(j)
+else:
+    lr = 0.0001
+    n_epoch = 25
+    batch_size = 512
+    source_distance = [2]
+    target_distance = source_distance
+    desired_serial_numbers = ALL_SERIAL_NUMBERS
+    alpha = 0.001
+    num_additional_extractor_fc_layers=1
+    experiment_name = "Fill Me ;)"
+    patience = 10
+    seed = 1337
+    num_examples_per_device=200000
+    window_stride=1
+    window_length=256 #Will break if not 256 due to model hyperparameters
+    desired_runs=ALL_RUNS
 
 
 random.seed(seed)
 torch.manual_seed(seed)
 
+start_time_secs = time.time()
+
 source_ds = ORACLE_Torch.ORACLE_Torch_Dataset(
                 desired_serial_numbers=desired_serial_numbers,
                 desired_distances=source_distance,
-                desired_runs=ALL_RUNS,
-                window_length=256,
-                window_stride=1,
+                desired_runs=desired_runs,
+                window_length=window_length,
+                window_stride=window_stride,
                 num_examples_per_device=num_examples_per_device,
-                seed=1337,  
-                max_cache_size=100000*16,
+                seed=seed,  
+                max_cache_size=0,
                 transform_func=lambda x: (x["iq"], serial_number_to_id(x["serial_number"]), x["distance_ft"])
 )
 
 target_ds = ORACLE_Torch.ORACLE_Torch_Dataset(
                 desired_serial_numbers=desired_serial_numbers,
                 desired_distances=target_distance,
-                desired_runs=ALL_RUNS,
-                window_length=256,
-                window_stride=1,
+                desired_runs=desired_runs,
+                window_length=window_length,
+                window_stride=window_stride,
                 num_examples_per_device=num_examples_per_device,
-                seed=1337,  
-                max_cache_size=100000*16,
+                seed=seed,  
+                max_cache_size=0,
                 transform_func=lambda x: (x["iq"], serial_number_to_id(x["serial_number"]), x["distance_ft"])
 )
 
@@ -127,7 +133,8 @@ source_train_dl, source_val_dl, source_test_dl = wrap_datasets_in_dataloaders(
     shuffle=True,
     num_workers=5,
     persistent_workers=True,
-    prefetch_factor=10
+    prefetch_factor=10,
+    pin_memory=True
 )
 target_train_dl, target_val_dl, target_test_dl = wrap_datasets_in_dataloaders(
     (target_train_ds, target_val_ds, target_test_ds),
@@ -135,14 +142,9 @@ target_train_dl, target_val_dl, target_test_dl = wrap_datasets_in_dataloaders(
     shuffle=True,
     num_workers=5,
     persistent_workers=True,
-    prefetch_factor=10
+    prefetch_factor=10,
+    pin_memory=True
 )
-
-# for i in range(10):
-#     for i in source_train_dl:
-#         pass
-
-# sys.exit(0)
 
 my_net = CNNModel(num_additional_extractor_fc_layers)
 
@@ -151,7 +153,6 @@ my_net = CNNModel(num_additional_extractor_fc_layers)
 optimizer = optim.Adam(my_net.parameters(), lr=lr)
 
 loss_class = torch.nn.CrossEntropyLoss()
-# loss_domain = torch.nn.CrossEntropyLoss()
 loss_domain = torch.nn.L1Loss()
 # loss_domain = torch.nn.MSELoss()
 
