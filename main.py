@@ -66,6 +66,7 @@ if __name__ == "__main__"  and len(sys.argv) == 1:
 
     print(j)
 else:
+    experiment_name = "Fill Me ;)"
     lr = 0.0001
     n_epoch = 25
     batch_size = 512
@@ -74,7 +75,6 @@ else:
     desired_serial_numbers = ALL_SERIAL_NUMBERS
     alpha = 0.001
     num_additional_extractor_fc_layers=1
-    experiment_name = "Fill Me ;)"
     patience = 10
     seed = 1337
     num_examples_per_device=200000
