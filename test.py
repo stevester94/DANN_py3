@@ -31,9 +31,10 @@ def test(model, label_loss_func, domain_loss_func, iterator):
 
         y_hat, t_hat = model(input_data=x, t=t, alpha=alpha)
         t_hat = torch.flatten(t_hat)
-        
+                
         pred = y_hat.data.max(1, keepdim=True)[1]
-        n_correct += pred.eq(t.data.view_as(pred)).cpu().sum()
+
+        n_correct += pred.eq(y.data.view_as(pred)).cpu().sum()
         n_total += batch_size
         total_label_loss += label_loss_func(y_hat, y).cpu().item()
         total_domain_loss += domain_loss_func(t_hat, t).cpu().item()
