@@ -9,11 +9,11 @@ patience=10
 ALL_SERIAL_NUMBERS='["3123D52","3123D65","3123D79","3123D80","3123D54","3123D70","3123D7B","3123D89","3123D58","3123D76","3123D7D","3123EFE","3123D64","3123D78","3123D7E","3124E4A"]'
 
 for batch_size in 256; do
-for epochs in 5; do
+for epochs in 25; do
 for learning_rate in 0.0001; do
 # for source_distance in "[2]" "[8]"; do
-for source_distance in "[2]"; do
-for target_distance in "[2]"; do
+for source_distance in "[14]"; do
+for target_distance in "[14]"; do
 for alpha in 0.001; do
 for num_additional_extractor_fc_layers in 1; do
 for window_stride in 1; do

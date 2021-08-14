@@ -136,7 +136,7 @@ source_train_dl, source_val_dl, source_test_dl = wrap_datasets_in_dataloaders(
     prefetch_factor=10,
     pin_memory=True
 )
-target_train_dl, target_val_dl, target_test_dl = wrap_datasets_in_dataloaders(
+_, target_val_dl, target_test_dl = wrap_datasets_in_dataloaders(
     (target_train_ds, target_val_ds, target_test_ds),
     batch_size=batch_size,
     shuffle=True,

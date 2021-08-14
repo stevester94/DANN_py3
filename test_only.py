@@ -34,10 +34,10 @@ cudnn.benchmark = True
 
 
 
-experiment_name = "Fill Me ;)"
+experiment_name = "(in)sanity"
 lr = 0.0001
 n_epoch = 25
-batch_size = 512
+batch_size = 50
 source_distance = [2]
 target_distance = source_distance
 desired_serial_numbers = ALL_SERIAL_NUMBERS
@@ -45,7 +45,7 @@ alpha = 0.001
 num_additional_extractor_fc_layers=1
 patience = 10
 seed = 1337
-num_examples_per_device=200000
+num_examples_per_device=10
 window_stride=1
 window_length=256 #Will break if not 256 due to model hyperparameters
 desired_runs=ALL_RUNS
