@@ -3,13 +3,12 @@ import torch.nn as nn
 from functions import ReverseLayerF
 
 
-class CNNModel(nn.Module):
+class CIDA_Model(nn.Module):
 
     def __init__(self, num_additional_extractor_fc_layers):
-        super(CNNModel, self).__init__()
+        super(CIDA_Model, self).__init__()
         self.feature = nn.Sequential()
         self.feature_2 = nn.Sequential()
-        import torch
 
         # My shit
         # self.feature.add_module("f_flatten", nn.Flatten())

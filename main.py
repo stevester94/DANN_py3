@@ -7,8 +7,6 @@ import torch.backends.cudnn as cudnn
 import torch.optim as optim
 import torch.utils.data
 import numpy as np
-from model import CNNModel
-
 import json
 
 from test import test
@@ -42,7 +40,8 @@ cudnn.benchmark = True
 
 
 
-
+MODEL_TYPE = "CNN"
+MAX_CACHE_SIZE = 0
 
 
 if __name__ == "__main__"  and len(sys.argv) == 1:
@@ -68,7 +67,7 @@ if __name__ == "__main__"  and len(sys.argv) == 1:
 else:
     experiment_name = "Fill Me ;)"
     lr = 0.0001
-    n_epoch = 25
+    n_epoch = 5
     batch_size = 512
     source_distance = [2]
     target_distance = source_distance
@@ -77,7 +76,7 @@ else:
     num_additional_extractor_fc_layers=1
     patience = 10
     seed = 1337
-    num_examples_per_device=200000
+    num_examples_per_device=10000
     window_stride=1
     window_length=256 #Will break if not 256 due to model hyperparameters
     desired_runs=ALL_RUNS
@@ -96,7 +95,7 @@ source_ds = ORACLE_Torch.ORACLE_Torch_Dataset(
                 window_stride=window_stride,
                 num_examples_per_device=num_examples_per_device,
                 seed=seed,  
-                max_cache_size=0,
+                max_cache_size=MAX_CACHE_SIZE,
                 transform_func=lambda x: (x["iq"], serial_number_to_id(x["serial_number"]), x["distance_ft"])
 )
 
@@ -108,7 +107,7 @@ target_ds = ORACLE_Torch.ORACLE_Torch_Dataset(
                 window_stride=window_stride,
                 num_examples_per_device=num_examples_per_device,
                 seed=seed,  
-                max_cache_size=0,
+                max_cache_size=MAX_CACHE_SIZE,
                 transform_func=lambda x: (x["iq"], serial_number_to_id(x["serial_number"]), x["distance_ft"])
 )
 
@@ -146,7 +145,12 @@ _, target_val_dl, target_test_dl = wrap_datasets_in_dataloaders(
     pin_memory=True
 )
 
-my_net = CNNModel(num_additional_extractor_fc_layers)
+if MODEL_TYPE == "CNN":
+    from cnn_model import CNN_Model
+    my_net = CNN_Model(num_additional_extractor_fc_layers)
+elif MODEL_TYPE == "CIDA":
+    from cida_model import CIDA_Model
+    my_net = CIDA_Model(num_additional_extractor_fc_layers)
 
 # setup optimizer
 
