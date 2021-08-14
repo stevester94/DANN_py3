@@ -40,6 +40,7 @@ cudnn.benchmark = True
 
 
 
+MODEL_TYPE = "CIDA"
 MODEL_TYPE = "CNN"
 MAX_CACHE_SIZE = 0
 
@@ -227,7 +228,7 @@ for epoch in range(1,n_epoch+1):
             s_domain = s_domain.cuda()
 
 
-        class_output, domain_output = my_net(input_data=s_img, t=s_domain, alpha=alpha)
+        class_output, domain_output = my_net(x=s_img, t=s_domain, alpha=alpha)
         domain_output = torch.flatten(domain_output)
 
 

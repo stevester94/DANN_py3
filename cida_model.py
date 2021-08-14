@@ -102,12 +102,12 @@ class CIDA_Model(nn.Module):
         self.domain_classifier.add_module('d_fc2', nn.Linear(100, 1))
         # self.domain_classifier.add_module('d_softmax', nn.LogSoftmax(dim=1))
 
-    def forward(self, input_data, t, alpha):
-        # print("input_data:", input_data.shape)
+    def forward(self, x, t, alpha):
+        # print("x:", x.shape)
 
         # Doesn't change anything
-        # input_data = input_data.expand(input_data.data.shape[0], 3, 28, 28)
-        feature = self.feature(input_data)
+        # x = x.expand(x.data.shape[0], 3, 28, 28)
+        feature = self.feature(x)
         # print("feature:", feature.shape)
 
         feature = feature.view(-1, 50 * 58)
