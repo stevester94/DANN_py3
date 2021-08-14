@@ -12,3 +12,4 @@ experiment_name
 results.csv
 loss.csv
 results/
+experiment_parameters

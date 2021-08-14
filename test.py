@@ -1,7 +1,7 @@
 import torch.backends.cudnn as cudnn
 import torch.utils.data
 
-def test(model, label_loss_func, domain_loss_func, np_iterator):
+def test(model, label_loss_func, domain_loss_func, iterator):
     cuda = True
     cudnn.benchmark = True
     alpha = 0
@@ -14,7 +14,7 @@ def test(model, label_loss_func, domain_loss_func, np_iterator):
     total_label_loss = 0
     total_domain_loss = 0
 
-    for x,y,t in np_iterator:
+    for x,y,t in iterator:
 
         # test model using target data
         # x = torch.from_numpy(x)
