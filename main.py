@@ -157,7 +157,8 @@ elif MODEL_TYPE == "CIDA":
 
 optimizer = optim.Adam(my_net.parameters(), lr=lr)
 
-loss_class = torch.nn.CrossEntropyLoss()
+# loss_class = torch.nn.CrossEntropyLoss()
+loss_class = torch.nn.NLLLoss()
 loss_domain = torch.nn.L1Loss()
 # loss_domain = torch.nn.MSELoss()
 

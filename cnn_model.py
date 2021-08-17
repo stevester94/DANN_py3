@@ -63,7 +63,7 @@ class CNN_Model(nn.Module):
         # self.feature.add_module('dyuh_11', nn.ReLU(False))
         # self.feature.add_module('dyuh_12', nn.Dropout())
 
-        # self.feature.add_module('13', nn.LogSoftmax(dim=1))
+        self.feature.add_module('dyuh_11', nn.LogSoftmax(dim=1))
 
         """
         Original
