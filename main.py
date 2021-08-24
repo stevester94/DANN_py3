@@ -8,6 +8,7 @@ import torch.optim as optim
 import torch.utils.data
 import numpy as np
 import json
+import os
 
 from test import test
 from plotting import save_loss_curve
@@ -26,13 +27,7 @@ torch.set_default_dtype(torch.float64)
 
 BATCH_LOGGING_DECIMATION_FACTOR = 20
 RESULTS_PATH = "./results/"
-try:
-    import os, shutil
-    os.mkdir(RESULTS_PATH)
-except FileExistsError:
-    print("results dir exists, deleting then recreating")
-    shutil.rmtree(RESULTS_PATH)
-    os.mkdir(RESULTS_PATH)
+
 
 BEST_MODEL_PATH = RESULTS_PATH+"./best_model.pth"
 cuda = True
@@ -40,48 +35,53 @@ cudnn.benchmark = True
 
 
 
-MODEL_TYPE = "CIDA"
+# MODEL_TYPE = "CIDA"
 MODEL_TYPE = "CNN"
 MAX_CACHE_SIZE = 0
 
 
 if __name__ == "__main__"  and len(sys.argv) == 1:
     j = json.loads(sys.stdin.read())
+elif __name__ == "__main__"  and len(sys.argv) > 1:
+    fake_args = {}
+    fake_args["experiment_name"] = "Fill Me"
+    fake_args["lr"] = 0.0001
+    fake_args["n_epoch"] = 3
+    fake_args["batch_size"] = 256
+    fake_args["source_distance"] = [2]
+    fake_args["target_distance"] = [2]
+    fake_args["desired_serial_numbers"] = ALL_SERIAL_NUMBERS
+    fake_args["alpha"] = 0.001
+    fake_args["num_additional_extractor_fc_layers"]=1
+    fake_args["patience"] = 10
+    fake_args["seed"] = 1337
+    fake_args["num_examples_per_device"]=1000
+    fake_args["window_stride"]=1
+    fake_args["window_length"]=256 #Will break if not 256 due to model hyperparameters
+    fake_args["desired_runs"]=[1]
+    j = fake_args
 
-    lr = j["lr"]
-    n_epoch = j["n_epoch"]
-    batch_size = j["batch_size"]
-    source_distance = j["source_distance"]
-    target_distance = j["target_distance"]
-    desired_serial_numbers = j["desired_serial_numbers"]
-    alpha = j["alpha"]
-    num_additional_extractor_fc_layers = j["num_additional_extractor_fc_layers"]
-    experiment_name = j["experiment_name"]
-    patience = j["patience"]
-    seed = j["seed"]
-    num_examples_per_device = j["num_examples_per_device"]
-    window_stride = j["window_stride"]
-    window_length = j["window_length"]
-    desired_runs = j["desired_runs"]
 
-    print(j)
-else:
-    experiment_name = "Fill Me ;)"
-    lr = 0.0001
-    n_epoch = 5
-    batch_size = 512
-    source_distance = [2]
-    target_distance = source_distance
-    desired_serial_numbers = ALL_SERIAL_NUMBERS
-    alpha = 0.001
-    num_additional_extractor_fc_layers=1
-    patience = 10
-    seed = 1337
-    num_examples_per_device=10000
-    window_stride=1
-    window_length=256 #Will break if not 256 due to model hyperparameters
-    desired_runs=ALL_RUNS
+lr = j["lr"]
+n_epoch = j["n_epoch"]
+batch_size = j["batch_size"]
+source_distance = j["source_distance"]
+target_distance = j["target_distance"]
+desired_serial_numbers = j["desired_serial_numbers"]
+alpha = j["alpha"]
+num_additional_extractor_fc_layers = j["num_additional_extractor_fc_layers"]
+experiment_name = j["experiment_name"]
+patience = j["patience"]
+seed = j["seed"]
+num_examples_per_device = j["num_examples_per_device"]
+window_stride = j["window_stride"]
+window_length = j["window_length"]
+desired_runs = j["desired_runs"]
 
+print(j)
+
+experiment = {}
+experiment["args"] = j
 
 random.seed(seed)
 torch.manual_seed(seed)
@@ -326,11 +326,6 @@ print("Loading best model from epoch {} with combined loss of {}".format(*best_e
 my_net = torch.load(BEST_MODEL_PATH)
 
 save_loss_curve(history, RESULTS_PATH+"loss_curve.png")
-    # accu_t = test(test_ds_target)
-    # print('Accuracy of the %s dataset: %f\n' % ('Target', accu_t))
-    # if accu_t > best_accu_t:
-    #     best_accu_s = accu_s
-    #     best_accu_t = accu_t
 
 source_test_label_accuracy, source_test_label_loss, source_test_domain_loss = \
     test(my_net, loss_class, loss_domain, source_test_dl)
@@ -338,80 +333,36 @@ source_test_label_accuracy, source_test_label_loss, source_test_domain_loss = \
 target_test_label_accuracy, target_test_label_loss, target_test_domain_loss = \
     test(my_net, loss_class, loss_domain, target_test_dl)
 
+source_val_label_accuracy, source_val_label_loss, source_val_domain_loss = \
+    test(my_net, loss_class, loss_domain, source_val_dl)
+
+target_val_label_accuracy, target_val_label_loss, target_val_domain_loss = \
+    test(my_net, loss_class, loss_domain, target_val_dl)
+
+
 stop_time_secs = time.time()
 total_time_secs = stop_time_secs - start_time_secs
 
-with open(RESULTS_PATH+"results.txt", "w") as f:
-    out = ""
-    out += "Experiment name: {}\n".format(
-        experiment_name
-    )
+experiment["results"] = {}
+experiment["results"]["source_test_label_accuracy"] = source_test_label_accuracy
+experiment["results"]["source_test_label_loss"] = source_test_label_loss
+experiment["results"]["source_test_domain_loss"] = source_test_domain_loss
 
-    out += "Source Test Label Acc: {test_label_acc}, Source Test Label Loss: {test_label_loss}, Source Test Domain Loss: {test_domain_loss}\n".format(
-        test_label_acc=source_test_label_accuracy,
-        test_label_loss=source_test_label_loss,
-        test_domain_loss=source_test_domain_loss,
-    )
+experiment["results"]["target_test_label_accuracy"] = target_test_label_accuracy
+experiment["results"]["target_test_label_loss"] = target_test_label_loss
+experiment["results"]["target_test_domain_loss"] = target_test_domain_loss
 
-    out += "Target Test Label Acc: {test_label_acc}, Target Test Label Loss: {test_label_loss}, Target Test Domain Loss: {test_domain_loss}\n".format(
-        test_label_acc=target_test_label_accuracy,
-        test_label_loss=target_test_label_loss,
-        test_domain_loss=target_test_domain_loss,
-    )
+experiment["results"]["source_val_label_accuracy"] = source_val_label_accuracy
+experiment["results"]["source_val_label_loss"] = source_val_label_loss
+experiment["results"]["source_val_domain_loss"] = source_val_domain_loss
 
-    out += "total time seconds: {}\n".format(total_time_secs)
-    print(out)
-    f.write(out)
+experiment["results"]["target_val_label_accuracy"] = target_val_label_accuracy
+experiment["results"]["target_val_label_loss"] = target_val_label_loss
+experiment["results"]["target_val_domain_loss"] = target_val_domain_loss
 
+experiment["results"]["total_time_seconds"] = total_time_secs
 
-with open(RESULTS_PATH+"results.csv", "w") as f:
-    header = "NAME,SOURCE_DISTANCE,TARGET_DISTANCE,LEARNING_RATE,ALPHA,BATCH,EPOCHS,PATIENCE,"
-    header += "SOURCE_TEST_LABEL_LOSS,SOURCE_TEST_LABEL_ACC,SOURCE_TEST_DOMAIN_LOSS,"
-    header += "TARGET_TEST_LABEL_LOSS,TARGET_TEST_LABEL_ACC,TARGET_TEST_DOMAIN_LOSS,TOTAL_TIME_SECS\n"
+experiment["history"] = history
 
-
-    row = "{NAME},{SOURCE_DISTANCE},{TARGET_DISTANCE},{LEARNING_RATE},{ALPHA},{BATCH},{EPOCHS},{PATIENCE},"
-    row += "{SOURCE_TEST_LABEL_LOSS},{SOURCE_TEST_LABEL_ACC},{SOURCE_TEST_DOMAIN_LOSS},"
-    row += "{TARGET_TEST_LABEL_LOSS},{TARGET_TEST_LABEL_ACC},{TARGET_TEST_DOMAIN_LOSS},{TOTAL_TIME_SECS}\n"
-
-    row = row.format(
-        NAME=experiment_name,
-        SOURCE_DISTANCE=source_distance,
-        TARGET_DISTANCE=target_distance,
-        LEARNING_RATE=lr,
-        ALPHA=alpha,
-        BATCH=batch_size,
-        EPOCHS=n_epoch,
-        PATIENCE=patience,
-        SOURCE_TEST_LABEL_LOSS=source_test_label_loss,
-        SOURCE_TEST_LABEL_ACC= source_test_label_accuracy,
-        SOURCE_TEST_DOMAIN_LOSS=source_test_domain_loss,
-        TARGET_TEST_LABEL_LOSS=target_test_label_loss,
-        TARGET_TEST_LABEL_ACC=target_test_label_accuracy,
-        TARGET_TEST_DOMAIN_LOSS=target_test_domain_loss,
-        TOTAL_TIME_SECS=total_time_secs,
-    )
-
-    f.write(header)
-    f.write(row)
-
-# Save history to csv
-with open(RESULTS_PATH+"loss.csv", "w") as f:
-    f.write("epoch,source_val_label_loss,source_val_domain_loss,target_val_label_loss,target_val_domain_loss,source_train_label_loss,source_train_domain_loss,source_val_label_accuracy,target_val_label_accuracy\n")
-    for i in range(len(history["indices"])):
-        f.write(
-            ",".join(
-                (
-                    str(i),
-                    str(history["source_val_label_loss"][i]),
-                    str(history["source_val_domain_loss"][i]),
-                    str(history["target_val_label_loss"][i]),
-                    str(history["target_val_domain_loss"][i]),
-                    str(history["source_train_label_loss"][i]),
-                    str(history["source_train_domain_loss"][i]),
-                    str(history["source_val_label_accuracy"][i]),
-                    str(history["target_val_label_accuracy"][i]),
-                )
-            )
-        )
-        f.write("\n")
+with open(os.path.join(RESULTS_PATH,"experiment.json"), "w") as f:
+    json.dump(experiment, f, sort_keys=True, indent=4)

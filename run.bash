@@ -1,27 +1,28 @@
 #! /usr/bin/env bash
 set -eou pipefail
 
-results_base_path="$CSC500_ROOT_PATH/csc500-past-runs/chapter2/strideCheck"
-mkdir -p $results_base_path
 
-patience=10
+results_base_path="$CSC500_ROOT_PATH/csc500-past-runs/chapter2/jsonTesting"
+
+patience=100
 
 ALL_SERIAL_NUMBERS='["3123D52","3123D65","3123D79","3123D80","3123D54","3123D70","3123D7B","3123D89","3123D58","3123D76","3123D7D","3123EFE","3123D64","3123D78","3123D7E","3124E4A"]'
 
+for seed in 6031 1710 4253 8134 5133 9001 1337; do
 for batch_size in 256; do
-for epochs in 5; do
+# for epochs in 1000; do
+for epochs in 3; do
 for learning_rate in 0.0001; do
 # for source_distance in "[2]" "[8]"; do
 for source_distance in "[14]"; do
 for target_distance in "[14]"; do
 for alpha in 0.001; do
 for num_additional_extractor_fc_layers in 1; do
-for window_stride in 25 35 45 55 65 75 85 95 100 200 300; do
+for window_stride in 50; do
 for window_length in 256; do
-for num_examples_per_device in 200000; do
-for desired_runs in "[1,2]"; do
+for num_examples_per_device in 100; do
+for desired_runs in "[1]"; do
 for desired_serial_numbers in "$ALL_SERIAL_NUMBERS"; do
-for seed in 25792 15474 5133; do
 # for seed in 8646; do
     experiment_name=name:cnnOnly-Dummy-nllLoss
     experiment_name=${experiment_name}_tipoff:yes
@@ -45,11 +46,11 @@ for seed in 25792 15474 5133; do
         experiment_name=${experiment_name}_serials:${desired_serial_numbers}
     fi
 
-
-    echo $experiment_name > results/experiment_name
+    rm -rf results
+    mkdir results
     echo "Begin $experiment_name" | tee results/logs
 
-    cat << EOF > experiment_parameters
+    cat << EOF | python3 ./main.py 2>&1 | tee --append results/logs
     {
         "seed": $seed,
         "patience": $patience,
@@ -69,7 +70,7 @@ for seed in 25792 15474 5133; do
     }
 EOF
 
-    cat experiment_parameters | python3 ./main.py 2>&1 | tee --append logs
+    mkdir -p $results_base_path
 
     cp -R --no-clobber . $results_base_path/$experiment_name
     rm $results_base_path/$experiment_name/.gitignore
