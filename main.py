@@ -55,7 +55,7 @@ elif __name__ == "__main__"  and len(sys.argv) > 1:
     fake_args["num_additional_extractor_fc_layers"]=1
     fake_args["patience"] = 10
     fake_args["seed"] = 1337
-    fake_args["num_examples_per_device"]=20000
+    fake_args["num_examples_per_device"]=200000
     fake_args["window_stride"]=50
     fake_args["window_length"]=256 #Will break if not 256 due to model hyperparameters
     fake_args["desired_runs"]=[1]
@@ -97,7 +97,8 @@ source_ds = ORACLE_Torch.ORACLE_Torch_Dataset(
                 num_examples_per_device=num_examples_per_device,
                 seed=seed,  
                 max_cache_size=MAX_CACHE_SIZE,
-                transform_func=lambda x: (x["iq"], serial_number_to_id(x["serial_number"]), x["distance_ft"])
+                transform_func=lambda x: (x["iq"], serial_number_to_id(x["serial_number"]), x["distance_ft"]),
+                prime_cache=True
 )
 
 target_ds = ORACLE_Torch.ORACLE_Torch_Dataset(

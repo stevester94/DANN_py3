@@ -2,21 +2,19 @@
 set -eou pipefail
 
 
-results_base_path="$CSC500_ROOT_PATH/csc500-past-runs/chapter2/multiDistance_regularConv"
+results_base_path="$CSC500_ROOT_PATH/csc500-past-runs/chapter2/cnnHailMary_regularConv"
 
 patience=10
 
 ALL_SERIAL_NUMBERS='["3123D52","3123D65","3123D79","3123D80","3123D54","3123D70","3123D7B","3123D89","3123D58","3123D76","3123D7D","3123EFE","3123D64","3123D78","3123D7E","3124E4A"]'
+ALL_DISTANCES="[14,2,44,62,20,32,50,8,26,38,56]"
 
-# for seed in ; do
-for seed in 15474 1924 2293 25792 6107 6031 1710 4253 8134 5133; do
-#for seed in 6031 1710 4253 8134 5133; do
+for seed in 2293 15474 1924 25792 6107 6031 1710 4253 8134 5133; do
 for batch_size in 256; do
-for epochs in 100; do
+for epochs in 10000; do
 for learning_rate in 0.0001; do
-# for source_distance in "[2]" "[8]"; do
-for source_distance in "[14,2,44]"; do
-for target_distance in "[14,2,44]"; do
+for source_distance in $ALL_DISTANCES; do
+for target_distance in $ALL_DISTANCES; do
 for alpha in 0.001; do
 for num_additional_extractor_fc_layers in 1; do
 for window_stride in 50; do
@@ -25,8 +23,8 @@ for num_examples_per_device in 200000; do
 for desired_runs in "[1]"; do
 for desired_serial_numbers in "$ALL_SERIAL_NUMBERS"; do
 # for seed in 8646; do
-    experiment_name=name:cnnOnly-Dummy-nllLoss
-    experiment_name=${experiment_name}_tipoff:yes
+    experiment_name=name:cnnOnly-nllLoss
+    experiment_name=${experiment_name}_tipoff:no
     experiment_name=${experiment_name}_seed:${seed}
     experiment_name=${experiment_name}_srcDistance:${source_distance}
     experiment_name=${experiment_name}_targetDistance:${target_distance}
