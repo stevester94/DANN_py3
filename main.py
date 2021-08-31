@@ -37,7 +37,7 @@ cudnn.benchmark = True
 
 # MODEL_TYPE = "CIDA"
 MODEL_TYPE = "CNN"
-MAX_CACHE_SIZE = 0
+MAX_CACHE_SIZE = 200000*len(ALL_SERIAL_NUMBERS)*1000
 
 
 if __name__ == "__main__"  and len(sys.argv) == 1:
@@ -46,17 +46,17 @@ elif __name__ == "__main__"  and len(sys.argv) > 1:
     fake_args = {}
     fake_args["experiment_name"] = "Fill Me"
     fake_args["lr"] = 0.0001
-    fake_args["n_epoch"] = 3
+    fake_args["n_epoch"] = 10
     fake_args["batch_size"] = 256
-    fake_args["source_distance"] = [2]
-    fake_args["target_distance"] = [2]
+    fake_args["source_distance"] = ALL_DISTANCES_FEET
+    fake_args["target_distance"] = ALL_DISTANCES_FEET
     fake_args["desired_serial_numbers"] = ALL_SERIAL_NUMBERS
     fake_args["alpha"] = 0.001
     fake_args["num_additional_extractor_fc_layers"]=1
     fake_args["patience"] = 10
     fake_args["seed"] = 1337
-    fake_args["num_examples_per_device"]=1000
-    fake_args["window_stride"]=1
+    fake_args["num_examples_per_device"]=20000
+    fake_args["window_stride"]=50
     fake_args["window_length"]=256 #Will break if not 256 due to model hyperparameters
     fake_args["desired_runs"]=[1]
     j = fake_args
@@ -112,6 +112,8 @@ target_ds = ORACLE_Torch.ORACLE_Torch_Dataset(
                 transform_func=lambda x: (x["iq"], serial_number_to_id(x["serial_number"]), x["distance_ft"])
 )
 
+
+
 def wrap_datasets_in_dataloaders(datasets, **kwargs):
     dataloaders = []
     for ds in datasets:
@@ -131,20 +133,35 @@ source_train_dl, source_val_dl, source_test_dl = wrap_datasets_in_dataloaders(
     (source_train_ds, source_val_ds, source_test_ds),
     batch_size=batch_size,
     shuffle=True,
-    num_workers=5,
+    num_workers=1,
     persistent_workers=True,
-    prefetch_factor=10,
+    prefetch_factor=50,
     pin_memory=True
 )
 _, target_val_dl, target_test_dl = wrap_datasets_in_dataloaders(
     (target_train_ds, target_val_ds, target_test_ds),
     batch_size=batch_size,
     shuffle=True,
-    num_workers=5,
+    num_workers=1,
     persistent_workers=True,
-    prefetch_factor=10,
+    prefetch_factor=50,
     pin_memory=True
 )
+
+# print("Priming train_dl")
+# data_source_iter = iter(source_train_dl)
+# for i in range(len(source_train_dl)):
+#     data_source = data_source_iter.next()
+
+# print("Priming train_dl")
+# data_source_iter = iter(source_train_dl)
+# for i in range(len(source_train_dl)):
+#     data_source = data_source_iter.next()
+
+# print("Priming train_dl")
+# data_source_iter = iter(source_train_dl)
+# for i in range(len(source_train_dl)):
+#     data_source = data_source_iter.next()
 
 if MODEL_TYPE == "CNN":
     from cnn_model import CNN_Model
@@ -246,6 +263,13 @@ for epoch in range(1,n_epoch+1):
         optimizer.step()
 
         if i % BATCH_LOGGING_DECIMATION_FACTOR == 0:
+            # import psutil
+            # print("Nump open files", len(psutil.Process().open_files()))
+
+            # print("Len Cache: ", source_train_ds.os.cache.get_len_cache())
+            # print("Cache Misses: ", source_train_ds.os.cache.get_cache_misses())
+            # print("Cache Hits: ", source_train_ds.os.cache.get_cache_hits())
+
             cur_time = time.time()
             batches_per_second = BATCH_LOGGING_DECIMATION_FACTOR / (cur_time - last_time)
             last_time = cur_time

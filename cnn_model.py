@@ -45,6 +45,10 @@ class CNN_Model(nn.Module):
         self.feature = nn.Sequential()
 
         # Unique naming matters
+        
+        # This first layer does depthwise convolution; each channel gets (out_channels/groups) number of filters. These are applied, and
+        # then simply stacked in the output
+        #self.feature.add_module('dyuh_1', nn.Conv1d(in_channels=2, out_channels=50, kernel_size=7, stride=1, groups=2))
         self.feature.add_module('dyuh_1', nn.Conv1d(in_channels=2, out_channels=50, kernel_size=7, stride=1))
         self.feature.add_module('dyuh_2', nn.ReLU(False)) # Optionally do the operation in place
         self.feature.add_module('dyuh_3', nn.Conv1d(in_channels=50, out_channels=50, kernel_size=7, stride=2))
