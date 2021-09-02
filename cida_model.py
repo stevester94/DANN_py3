@@ -5,7 +5,7 @@ from functions import ReverseLayerF
 
 class CIDA_Model(nn.Module):
 
-    def __init__(self, num_additional_extractor_fc_layers):
+    def __init__(self):
         super(CIDA_Model, self).__init__()
         self.feature = nn.Sequential()
         self.feature_2 = nn.Sequential()
@@ -53,8 +53,8 @@ class CIDA_Model(nn.Module):
 
         self.feature_2.add_module('f2_fc0', nn.Linear(50 * 58 + 1, 256)) # t is also fed into the feature extractor
         # self.feature_2.add_module('f2_fc0', nn.Linear(50 * 58, 256)) # t NOT fed into the extractor
-        for i in range(num_additional_extractor_fc_layers):
-            self.feature_2.add_module('f2_fc{}'.format(i+1), nn.Linear(256, 256))
+        # for i in range(num_additional_extractor_fc_layers):
+        #     self.feature_2.add_module('f2_fc{}'.format(i+1), nn.Linear(256, 256))
         # self.feature_2.add_module('f_fc3', nn.Linear(256, 256))
 
         # x = torch.ones(10, 2, 128)

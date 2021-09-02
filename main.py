@@ -46,19 +46,19 @@ elif __name__ == "__main__"  and len(sys.argv) > 1:
     fake_args = {}
     fake_args["experiment_name"] = "Fill Me"
     fake_args["lr"] = 0.0001
-    fake_args["n_epoch"] = 10
+    fake_args["n_epoch"] = 1000
     fake_args["batch_size"] = 256
-    fake_args["source_distance"] = ALL_DISTANCES_FEET
-    fake_args["target_distance"] = ALL_DISTANCES_FEET
+    fake_args["source_distance"] = [2]
+    fake_args["target_distance"] = [2]
     fake_args["desired_serial_numbers"] = ALL_SERIAL_NUMBERS
     fake_args["alpha"] = 0.001
-    fake_args["num_additional_extractor_fc_layers"]=1
     fake_args["patience"] = 10
     fake_args["seed"] = 1337
-    fake_args["num_examples_per_device"]=200000
+    fake_args["num_examples_per_device"]=20000
     fake_args["window_stride"]=50
     fake_args["window_length"]=256 #Will break if not 256 due to model hyperparameters
     fake_args["desired_runs"]=[1]
+    fake_args["tipoff"] = False
     j = fake_args
 
 
@@ -69,7 +69,6 @@ source_distance = j["source_distance"]
 target_distance = j["target_distance"]
 desired_serial_numbers = j["desired_serial_numbers"]
 alpha = j["alpha"]
-num_additional_extractor_fc_layers = j["num_additional_extractor_fc_layers"]
 experiment_name = j["experiment_name"]
 patience = j["patience"]
 seed = j["seed"]
@@ -77,6 +76,7 @@ num_examples_per_device = j["num_examples_per_device"]
 window_stride = j["window_stride"]
 window_length = j["window_length"]
 desired_runs = j["desired_runs"]
+tipoff = j["tipoff"]
 
 print(j)
 
@@ -165,14 +165,20 @@ _, target_val_dl, target_test_dl = wrap_datasets_in_dataloaders(
 #     data_source = data_source_iter.next()
 
 if MODEL_TYPE == "CNN":
-    from cnn_model import CNN_Model
-    my_net = CNN_Model(num_additional_extractor_fc_layers)
+    if tipoff:
+        from cnn_tipoff_model import CNN_Tipoff_Model
+        my_net = CNN_Tipoff_Model()
+    else:
+        from cnn_model import CNN_Model
+        my_net = CNN_Model()
+
 elif MODEL_TYPE == "CIDA":
     from cida_model import CIDA_Model
-    my_net = CIDA_Model(num_additional_extractor_fc_layers)
+    my_net = CIDA_Model()
+else:
+    raise Exception("Invalid model type hardcoded")
 
 # setup optimizer
-
 optimizer = optim.Adam(my_net.parameters(), lr=lr)
 
 # loss_class = torch.nn.CrossEntropyLoss()

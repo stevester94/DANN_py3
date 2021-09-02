@@ -4,12 +4,12 @@ from functions import ReverseLayerF
 
 NUM_CLASSES=16
 
-class CNN_Model(nn.Module):
+class CNN_Tipoff_Model(nn.Module):
 
     def __init__(self):
-        super(CNN_Model, self).__init__()
-
-        print("Using Regular CNN")
+        super(CNN_Tipoff_Model, self).__init__()
+        
+        print("Using Tipoff CNN")
         self.conv = nn.Sequential()
         self.dense = nn.Sequential()
 
@@ -25,7 +25,7 @@ class CNN_Model(nn.Module):
         self.conv.add_module('dyuh_5', nn.Dropout())
         self.conv.add_module("dyuh_6", nn.Flatten())
 
-        self.dense.add_module('dyuh_7', nn.Linear(50 * 58, 80)) # Input shape, output shape
+        self.dense.add_module('dyuh_7', nn.Linear(50 * 58 + 1, 80)) # Input shape, output shape
         self.dense.add_module('dyuh_8', nn.ReLU(False))
         self.dense.add_module('dyuh_9', nn.Dropout())
         self.dense.add_module('dyuh_10', nn.Linear(80, NUM_CLASSES))
@@ -34,7 +34,10 @@ class CNN_Model(nn.Module):
     def forward(self, x, t, alpha):
         conv_result = self.conv(x)
 
-        y_hat = self.dense(conv_result)
+        t = torch.reshape(t, shape=(t.shape[0], 1))
+        concat = torch.cat((conv_result,t), dim=1)
+
+        y_hat = self.dense(concat)
 
         # Fake out the domain_output
         t_hat = [[-1.0]] * x.shape[0]
