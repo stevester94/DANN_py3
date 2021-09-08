@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from functions import ReverseLayerF
+import numpy as np
 
 NUM_CLASSES=16
 
@@ -35,6 +36,11 @@ class CNN_Tipoff_Model(nn.Module):
         conv_result = self.conv(x)
 
         t = torch.reshape(t, shape=(t.shape[0], 1))
+
+        t = np.zeros(x.shape[0])
+        t = torch.from_numpy(t).cuda()
+        t = t.reshape(t.shape + (1,))
+
         concat = torch.cat((conv_result,t), dim=1)
 
         y_hat = self.dense(concat)
